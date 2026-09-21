@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+/*
+  OpenSCORM brand tokens. Mirror the www marketing site palette so visitors
+  moving across openscorm.com / live.openscorm.com see one palette.
+*/
+
+@theme {
+  /* Component-architecture type scale, adopted from a sibling application (size
+     only, not its palette or letter-spacing). text-sm is the dominant size in
+     the admin tables, cards, and detail lists, so lifting it from Tailwind's
+     default 14px to 15px is what sets the app's reading size. The body's
+     -0.025em tracking and tnum-only features below are kept as-is, so type
+     still matches www.openscorm.com when a visitor crosses into the app. */
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+
+  --color-background: #ffffff;
+  --color-foreground: #101010;
+  --color-muted: #f3f4f6;
+  --color-muted-foreground: rgb(16 16 16 / 66%);
+  --color-border: #e5e7eb;
+  --color-card: #ffffff;
+  --color-card-foreground: #101010;
+  --color-primary: rgb(21 128 61);
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: rgb(22 101 52);
+  --color-secondary: rgb(1 84 207);
+  --color-secondary-foreground: #ffffff;
+  --color-accent: rgb(22 163 74);
+  --color-accent-foreground: #ffffff;
+  --color-link: rgb(21 128 61);
+  --color-selection-bg: rgb(220 252 231);
+  --color-success: rgb(22 163 74);
+  --color-warning: #f5a623;
+  --color-danger: #e74c3c;
+  --color-input-border: #d1d5db;
+  --color-input-focus-ring: rgb(22 163 74 / 25%);
+
+  /* Environment ramp: live carries no hue, because production is the ordinary
+     place to be and the color is spent marking the environments that are not
+     it. Theme-aware because a near-black swatch disappears against a dark card.
+     Canon is the infrastructure document under "Environment colors"; keep this
+     in step with the sibling apps, which define the same token. Lighter
+     than the gray the off-ramp environments share, so live still reads apart. */
+  --color-env-live: oklch(0.32 0.02 265);
+}
+
+.dark {
+  --color-background: #030620;
+  --color-foreground: #e5ecf6;
+  --color-muted: #0f172a;
+  --color-muted-foreground: rgb(229 236 246 / 66%);
+  --color-border: #334155;
+  --color-card: #0f172a;
+  --color-card-foreground: #e5ecf6;
+  --color-primary: rgb(21 128 61);
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: rgb(22 101 52);
+  --color-secondary: rgb(1 84 207);
+  --color-secondary-foreground: #ffffff;
+  --color-accent: rgb(22 163 74);
+  --color-accent-foreground: #ffffff;
+  --color-link: rgb(110 231 163);
+  --color-selection-bg: black;
+  --color-success: rgb(34 197 94);
+  --color-warning: #facc15;
+  --color-danger: #f87171;
+  --color-input-border: #475569;
+  --color-input-focus-ring: rgb(22 163 74 / 35%);
+  --color-env-live: oklch(0.75 0.015 265);
+}
+
+::selection {
+  background-color: var(--color-selection-bg);
+}
+
+.dark ::selection {
+  background-color: black;
+  color: snow;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family:
+    "Inter Variable",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  /*
+    www sets tracking-tight (-0.025em) on body and no font-feature-settings.
+    Match the tracking so type does not reflow when a visitor crosses from
+    www.openscorm.com into the app, and drop cv11 (Inter's single-storey a)
+    which www does not enable. tnum stays: tabular digits earn their keep in
+    the admin tables and www has no equivalent surface to disagree with.
+  */
+  font-feature-settings: "tnum";
+  letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Native checkboxes carry no per-instance class; theme them once here so every
+   checkbox across the app matches the palette in both light and dark. */
+input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.bg-background {
+  background-color: var(--color-background);
+}
+.text-foreground {
+  color: var(--color-foreground);
+}
+.bg-card {
+  background-color: var(--color-card);
+}
+.text-card-foreground {
+  color: var(--color-card-foreground);
+}
+.bg-muted {
+  background-color: var(--color-muted);
+}
+.text-muted-foreground {
+  color: var(--color-muted-foreground);
+}
+.border-border {
+  border-color: var(--color-border);
+}
+.bg-primary {
+  background-color: var(--color-primary);
+}
+.text-primary-foreground {
+  color: var(--color-primary-foreground);
+}
+.bg-accent {
+  background-color: var(--color-accent);
+}
+.text-accent-foreground {
+  color: var(--color-accent-foreground);
+}
+.text-success {
+  color: var(--color-success);
+}
+.text-warning {
+  color: var(--color-warning);
+}
+.text-danger {
+  color: var(--color-danger);
+}
+.text-link {
+  color: var(--color-link);
+}
+.bg-accent {
+  background-color: var(--color-accent);
+}

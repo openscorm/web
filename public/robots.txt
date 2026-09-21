@@ -1,0 +1,7 @@
+# The app host is the signed-in product, not a site to index.
+# Crawling is allowed on purpose: every route serves the same shell, and that
+# shell carries a noindex meta which a crawler can only honor if it fetches
+# the page. A Disallow here would block the crawl and leave URL-only entries
+# in the index instead.
+User-agent: *
+Disallow:

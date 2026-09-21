@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      A credential form on a page with no description and a bare title reads as
+      phishing to a classifier that cannot run the SPA, so the description says
+      what the form is for. noindex keeps every route (all of which return this
+      same shell) out of the index; robots.txt allows the crawl so the noindex
+      can be seen. Lobby pages set their own document.title through usePageTitle.
+    -->
+    <title>OpenSCORM</title>
+    <meta
+      name="description"
+      content="Open-source SCORM content delivery at a predictable flat rate. Upload packages, deliver through any LMS or none, and track completions for audit."
+    />
+    <meta name="robots" content="noindex" />
+    <script>
+      (function () {
+        try {
+          // Runs before paint so the page never flashes the wrong theme.
+          // Resolution order must stay in sync with src/hooks/useTheme.ts: the
+          // cookie is shared with www.openscorm.com via the parent domain,
+          // localStorage only covers this origin, and the OS decides when the
+          // user has made no explicit choice anywhere.
+          var match = document.cookie.match(/(?:^|;\s*)theme=(dark|light)\b/);
+          var stored = match ? match[1] : localStorage.getItem("theme");
+          var dark =
+            stored === "dark" ||
+            (stored !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-background text-foreground">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

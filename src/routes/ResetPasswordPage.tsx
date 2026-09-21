@@ -1,0 +1,179 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+
+import { api, ApiError } from "@/lib/api";
+import type { ProblemResponse } from "@/lib/types";
+import { LobbyLayout } from "@/components/LobbyLayout";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { PasswordInput } from "@/components/PasswordInput";
+
+const schema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters."),
+    confirm: z.string().min(1, "Confirm your password."),
+  })
+  .refine((v) => v.password === v.confirm, {
+    path: ["confirm"],
+    message: "Passwords do not match.",
+  });
+
+type FormValues = z.infer<typeof schema>;
+
+// The reset URL is emailed as
+//   https://app.openscorm.com/reset?username=<login>&email=<email>&token=<token>
+// The API appends the three query params to whatever base the caller passes.
+// All three parameters are echoed back to the API on submit.
+export function ResetPasswordPage() {
+  usePageTitle("Reset your password | OpenSCORM");
+  const [search] = useSearchParams();
+  const email = search.get("email") ?? "";
+  const login = search.get("username") ?? "";
+  const token = search.get("token") ?? "";
+  const nav = useNavigate();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const { register, handleSubmit, formState } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { password: "", confirm: "" },
+  });
+
+  const complete = useMutation({
+    mutationFn: async (values: FormValues) =>
+      api<void>("/api/auth/password-reset/complete", {
+        method: "POST",
+        body: JSON.stringify({ email, login, token, password: values.password }),
+      }),
+    onSuccess: () => setDone(true),
+    onError: (err) => {
+      if (err instanceof ApiError && err.problem) {
+        const problem = err.problem as ProblemResponse;
+        setServerError(problem.detail ?? problem.title ?? "Reset failed.");
+      } else {
+        setServerError("Reset failed. Please try again.");
+      }
+    },
+  });
+
+  if (!token || !email || !login) {
+    return (
+      <LobbyLayout>
+        <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
+          <h1 className="mb-2 text-2xl font-bold tracking-tight">Invalid reset link</h1>
+          <p className="text-muted-foreground mb-6 text-sm">
+            The link is missing required information. Start over.
+          </p>
+          <Link to="/forgot" className="text-link text-sm hover:underline">
+            Request a new link
+          </Link>
+        </div>
+      </LobbyLayout>
+    );
+  }
+
+  return (
+    <LobbyLayout>
+      <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
+        <h1 className="mb-6 text-3xl font-bold tracking-tight">Set new password</h1>
+
+        {done ? (
+          <>
+            <div className="mb-6 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
+              Password updated. Sign in with your new password.
+            </div>
+            <div className="grid">
+              <button
+                type="button"
+                onClick={() => nav("/login")}
+                className="bg-primary inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-[color:var(--color-primary-hover)] focus-visible:ring-2 focus-visible:ring-[rgb(22_163_74)] focus-visible:ring-offset-2 focus-visible:outline-none md:px-8"
+              >
+                Go to sign in
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {serverError && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+              >
+                {serverError}
+              </div>
+            )}
+
+            <form
+              onSubmit={handleSubmit((values) => {
+                setServerError(null);
+                complete.mutate(values);
+              })}
+              noValidate
+            >
+              <div className="mb-4">
+                <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  readOnly
+                  className="bg-muted text-muted-foreground block w-full rounded-lg border border-[color:var(--color-input-border)] px-4 py-3 text-[15px]"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
+                  New password
+                </label>
+                <PasswordInput
+                  id="password"
+                  autoComplete="new-password"
+                  autoFocus
+                  className="bg-background text-foreground focus:border-primary block w-full rounded-lg border border-[color:var(--color-input-border)] px-4 py-3 text-[15px] transition-colors focus:ring-2 focus:ring-[color:var(--color-input-focus-ring)] focus:outline-none"
+                  {...register("password")}
+                />
+                {formState.errors.password && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="confirm" className="mb-1.5 block text-sm font-medium">
+                  Confirm password
+                </label>
+                <PasswordInput
+                  id="confirm"
+                  autoComplete="new-password"
+                  className="bg-background text-foreground focus:border-primary block w-full rounded-lg border border-[color:var(--color-input-border)] px-4 py-3 text-[15px] transition-colors focus:ring-2 focus:ring-[color:var(--color-input-focus-ring)] focus:outline-none"
+                  {...register("confirm")}
+                />
+                {formState.errors.confirm && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {formState.errors.confirm.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid">
+                <button
+                  type="submit"
+                  disabled={complete.isPending}
+                  className="bg-primary inline-flex items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-[color:var(--color-primary-hover)] focus-visible:ring-2 focus-visible:ring-[rgb(22_163_74)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 md:px-8"
+                >
+                  {complete.isPending ? "Updating…" : "Change password"}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </LobbyLayout>
+  );
+}
