@@ -40,8 +40,11 @@ export function LobbyLayout({ children }: { children: ReactNode }) {
             <a href="https://www.openscorm.com/terms" className="hover:text-foreground mr-4">
               Terms
             </a>
-            <a href="https://www.openscorm.com/license" className="hover:text-foreground">
+            <a href="https://www.openscorm.com/license" className="hover:text-foreground mr-4">
               License (AGPL v3)
+            </a>
+            <a href="/THIRD-PARTY-NOTICES.txt" className="hover:text-foreground">
+              Notices
             </a>
           </div>
           <div>

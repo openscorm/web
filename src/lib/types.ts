@@ -37,6 +37,11 @@ export interface MeResponse {
   // /me carries them, and a session cached before they shipped omits them.
   channel?: string | null;
   isCommunity?: boolean;
+  // Whether the tenant is a founder or scratch account. Registered on every
+  // client event so the analytics test-account filter excludes it, the same
+  // flag the server stamps on its own events. Optional for the same reason as
+  // the two above.
+  isTest?: boolean;
   // Product-analytics consent for managers and operators.
   // null is the server saying undecided, which is what opens the consent
   // moment; undefined is a payload from before the field shipped (or the

@@ -127,6 +127,29 @@ describe("analytics mode machine", () => {
     expect(ph.capture).toHaveBeenCalledWith("course_launched", undefined);
   });
 
+  // The test-account filter keys on is_test. The server stamps it on its own
+  // events; client events only carry it if it is registered here, and without
+  // it a test tenant's pageviews count while its server events are excluded.
+  it("registers is_test on every client event and on the tenant group", async () => {
+    const a = await load();
+    a.applyAnalyticsUser({ ...manager, isTest: true });
+    expect(ph.register).toHaveBeenCalledWith(expect.objectContaining({ is_test: true }));
+    expect(ph.group).toHaveBeenCalledWith(
+      "tenant",
+      "3",
+      expect.objectContaining({ is_test: true }),
+    );
+  });
+
+  it("registers is_test false for a real tenant, and for a payload without the field", async () => {
+    for (const who of [{ ...manager, isTest: false }, manager]) {
+      const a = await load();
+      a.applyAnalyticsUser(who);
+      const [props] = ph.register.mock.calls.at(-1) as [Record<string, unknown>];
+      expect(props.is_test).toBe(false);
+    }
+  });
+
   // The /trust page states that events are tied to the account and not the
   // person. That sentence is only true while this holds, for every role, so it
   // is asserted rather than left to a reviewer to notice.

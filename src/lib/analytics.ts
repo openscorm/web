@@ -160,12 +160,17 @@ function identifyUser(me: MeResponse): void {
     // the same exclusion the server events carry inline.
     channel: me.channel ?? null,
     is_community: Boolean(me.isCommunity),
+    is_test: Boolean(me.isTest),
   });
   // Registered as super properties so every subsequent client event carries the
   // exclusion dimensions and the environment tag without re-passing them.
+  // is_test is what the test-account filter keys on; without it here, a test
+  // tenant's pageviews and autocapture count even though its server events
+  // are excluded.
   posthog.register({
     channel: me.channel ?? null,
     is_community: Boolean(me.isCommunity),
+    is_test: Boolean(me.isTest),
     ...(me.environment ? { environment: me.environment } : {}),
   });
 }

@@ -1,6 +1,6 @@
 # OpenSCORM web
 
-The React front-end for [OpenSCORM](https://www.openscorm.com), an open-source SCORM content delivery platform. This SPA serves the app at [live.openscorm.com](https://live.openscorm.com): sign-in, registration, course library, SCORM player, dashboards, and operator surfaces.
+The React front-end for [OpenSCORM](https://www.openscorm.com), an open-source SCORM content delivery platform. This SPA serves the app at [app.openscorm.com](https://app.openscorm.com): sign-in, registration, course library, SCORM player, dashboards, and operator surfaces.
 
 ## What is OpenSCORM?
 
