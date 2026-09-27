@@ -183,8 +183,15 @@ export function PricingPage() {
     },
   });
 
+  // A tier with no annual price (Provider, until its annual price is set) is
+  // monthly-only, so the annual view leaves it out rather than show $0.
   const buyableTiers =
-    tiers.data?.tiers.filter((t) => t.name !== "Trial" && t.name !== "Custom") ?? [];
+    tiers.data?.tiers.filter(
+      (t) =>
+        t.name !== "Trial" &&
+        t.name !== "Custom" &&
+        (interval === "monthly" || t.annualPriceUsd > 0),
+    ) ?? [];
 
   return (
     <AppShell>

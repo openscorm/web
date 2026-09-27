@@ -70,7 +70,7 @@ describe("RegisterPage terms acceptance", () => {
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText(/organization name/i), "Acme Training");
-    await user.type(screen.getByLabelText(/your name/i), "Dan");
+    await user.type(screen.getByLabelText(/your name/i), "Alex");
     await user.type(screen.getByLabelText(/^email$/i), "alex@acme.test");
     await user.type(screen.getByLabelText(/^password$/i), "correct horse battery");
     await user.click(screen.getByRole("button", { name: /create account/i }));
@@ -132,7 +132,7 @@ describe("RegisterPage signup source", () => {
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText(/organization name/i), "Acme Training");
-    await user.type(screen.getByLabelText(/your name/i), "Dan");
+    await user.type(screen.getByLabelText(/your name/i), "Alex");
     await user.type(screen.getByLabelText(/^email$/i), "alex@acme.test");
     await user.type(screen.getByLabelText(/^password$/i), "correct horse battery");
     await user.selectOptions(screen.getByLabelText(/how did you hear about us/i), "AIAssistant");

@@ -276,6 +276,7 @@ const PLAN_LABELS: Record<string, string> = {
   small: "Small",
   medium: "Medium",
   large: "Large",
+  provider: "Provider",
 };
 
 const inputClass =

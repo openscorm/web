@@ -24,9 +24,12 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 // The reset URL is emailed as
-//   https://app.openscorm.com/reset?username=<login>&email=<email>&token=<token>
-// The API appends the three query params to whatever base the caller passes.
-// All three parameters are echoed back to the API on submit.
+//   https://app.openscorm.com/reset?token=<id>.<secret>
+// One opaque value: the server finds the reset request by the id and takes the
+// account from it, so the link carries no login and no email. A link sent
+// before that change reads ?username=<login>&email=<email>&token=<secret>; it
+// still works until it expires, two hours after it was sent, so those two
+// values are passed along when present and ignored when not.
 export function ResetPasswordPage() {
   usePageTitle("Reset your password | OpenSCORM");
   const [search] = useSearchParams();
@@ -46,7 +49,11 @@ export function ResetPasswordPage() {
     mutationFn: async (values: FormValues) =>
       api<void>("/api/auth/password-reset/complete", {
         method: "POST",
-        body: JSON.stringify({ email, login, token, password: values.password }),
+        body: JSON.stringify(
+          email && login
+            ? { email, login, token, password: values.password }
+            : { token, password: values.password },
+        ),
       }),
     onSuccess: () => setDone(true),
     onError: (err) => {
@@ -59,7 +66,7 @@ export function ResetPasswordPage() {
     },
   });
 
-  if (!token || !email || !login) {
+  if (!token) {
     return (
       <LobbyLayout>
         <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
@@ -113,18 +120,20 @@ export function ResetPasswordPage() {
               })}
               noValidate
             >
-              <div className="mb-4">
-                <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  readOnly
-                  className="bg-muted text-muted-foreground block w-full rounded-lg border border-[color:var(--color-input-border)] px-4 py-3 text-[15px]"
-                />
-              </div>
+              {email && (
+                <div className="mb-4">
+                  <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    readOnly
+                    className="bg-muted text-muted-foreground block w-full rounded-lg border border-[color:var(--color-input-border)] px-4 py-3 text-[15px]"
+                  />
+                </div>
+              )}
 
               <div className="mb-4">
                 <label htmlFor="password" className="mb-1.5 block text-sm font-medium">

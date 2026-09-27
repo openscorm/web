@@ -28,7 +28,7 @@
 //               provider's own audit report, and NOT a statement about
 //               OpenSCORM's own application or its configuration of that
 //               provider. Use it only where the provider's report is linked.
-//               Renders green (Dan, 2026-09-10): infrastructure-level
+//               Renders green (ruled 2026-09-10): infrastructure-level
 //               compliance is what clients and prospects have actually
 //               required, so it is a pass in procurement rather than a
 //               caveat. What keeps that honest is the label and the body,
@@ -55,6 +55,11 @@ export interface TrustControl {
   title: string;
   detail: string;
   status: ControlStatus;
+  /**
+   * Replaces the status label on the badge where the answer is a value rather
+   * than a grade (a region, for example). The status still sets the color.
+   */
+  label?: string;
   /** Outbound evidence links rendered under the detail (e.g. audit reports). */
   links?: { label: string; href: string }[];
 }
@@ -208,9 +213,9 @@ export const TRUST_SECTIONS: TrustSection[] = [
     intro: "How you can verify these claims.",
     controls: [
       {
-        title: "Open source and auditable",
+        title: "Open-source web client",
         detail:
-          "OpenSCORM is open source under the GNU AGPL v3. The web client is published on GitHub and the platform source for the version you use is provided on request, so the license terms can be checked rather than taken on trust.",
+          "The web client that runs in your browser is open source under the GNU AGPL v3 and published on GitHub, so you can see exactly what it does.",
         status: "in-place",
       },
       {
@@ -254,10 +259,10 @@ export const TRUST_SECTIONS: TrustSection[] = [
         ],
       },
       {
-        title: "Data residency",
-        detail:
-          "If you need data residency in a specific geographical region then please contact us to discuss your requirements in more detail.",
-        status: "on-request",
+        title: "Data location",
+        detail: "Hosted in Azure West US. Need your data held somewhere else? Talk to us.",
+        status: "in-place",
+        label: "United States",
       },
     ],
   },

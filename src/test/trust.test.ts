@@ -15,7 +15,7 @@ import { TRUST_SECTIONS, TRUST_LAST_REVIEWED } from "@/lib/trust";
 // does not see. It names the allowed keys rather than banning "ref", because
 // the next leak will be called something else.
 
-const ALLOWED_CONTROL_KEYS = ["title", "detail", "status", "links"];
+const ALLOWED_CONTROL_KEYS = ["title", "detail", "status", "label", "links"];
 const ALLOWED_LINK_KEYS = ["label", "href"];
 
 describe("trust page content", () => {

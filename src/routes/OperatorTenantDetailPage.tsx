@@ -47,7 +47,8 @@ interface EditTenantForm {
 
 // The plans the console may set. Custom is deliberately absent: it
 // has no catalog limits, so it is only ever shown as a current value.
-const PLANS = ["Trial", "Mini", "Starter", "Small", "Medium", "Large"];
+// Provider is refused by the API until the repriced catalog is on.
+const PLANS = ["Trial", "Mini", "Starter", "Small", "Medium", "Large", "Provider"];
 
 function editErrorMessage(error: unknown): string {
   if (error instanceof ApiError && typeof error.problem === "string") return error.problem;

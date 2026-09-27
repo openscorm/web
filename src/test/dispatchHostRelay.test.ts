@@ -4,7 +4,7 @@
 // about which origin gets to talk to us and what happens when the two ends
 // start out of order.
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHostRelay, hostAllowed, isReportable, RELAYED_ELEMENTS } from "@/dispatch/hostRelay";
 
@@ -32,6 +32,17 @@ function fakeScope() {
 function hello() {
   return { source: "openscorm-dispatch", type: "host-hello", version: 1 };
 }
+
+// The relay measures the sitting itself, from Date.now. Frozen time
+// keeps that measurement at zero, so every test below sees only what the
+// course reported unless it advances the clock on purpose.
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("hostAllowed", () => {
   it("is open when no allow-list is configured", () => {
@@ -298,5 +309,83 @@ describe("SCORM 2004 relay", () => {
     for (const element of RELAYED_ELEMENTS) {
       expect(element.startsWith("cmi.core.")).toBe(true);
     }
+  });
+});
+
+// The session player's rule, applied to the host. A course that reports no session time used to leave the host at zero, which a
+// customer reads as dispatch losing data.
+describe("measured session time", () => {
+  it("tells the host the measured sitting when the course reports none", () => {
+    const harness = fakeScope();
+    const relay = createHostRelay([], harness.scope);
+    harness.deliver(hello());
+
+    vi.advanceTimersByTime((4 * 60 + 11) * 1000);
+    relay.progress({ "cmi.core.lesson_status": "incomplete" });
+
+    const [message] = harness.postMessage.mock.calls[1];
+    expect(message.values).toEqual({
+      "cmi.core.lesson_status": "incomplete",
+      "cmi.core.session_time": "0000:04:11.00",
+    });
+  });
+
+  it("never overrides a time the course reported", () => {
+    const harness = fakeScope();
+    const relay = createHostRelay([], harness.scope);
+    harness.deliver(hello());
+
+    vi.advanceTimersByTime(60 * 60 * 1000);
+    relay.finish({
+      "cmi.core.lesson_status": "completed",
+      "cmi.core.session_time": "0000:05:00",
+    });
+
+    const [message] = harness.postMessage.mock.calls[1];
+    expect(message.values["cmi.core.session_time"]).toBe("0000:05:00");
+  });
+
+  it("measures over a reported zero, which a 1.2 model cannot tell from its default", () => {
+    const harness = fakeScope();
+    const relay = createHostRelay([], harness.scope);
+    harness.deliver(hello());
+
+    vi.advanceTimersByTime(90 * 1000);
+    relay.progress({
+      "cmi.core.lesson_status": "incomplete",
+      "cmi.core.session_time": "0000:00:00",
+    });
+
+    const [message] = harness.postMessage.mock.calls[1];
+    expect(message.values["cmi.core.session_time"]).toBe("0000:01:30.00");
+  });
+
+  it("ends the sitting at finish, not when a late hello lets it out", () => {
+    const harness = fakeScope();
+    const relay = createHostRelay([], harness.scope);
+
+    vi.advanceTimersByTime(10 * 60 * 1000);
+    relay.finish({ "cmi.core.lesson_status": "completed" });
+    vi.advanceTimersByTime(5 * 60 * 1000);
+    harness.deliver(hello());
+
+    const [message] = harness.postMessage.mock.calls[1];
+    expect(message.type).toBe("finish");
+    expect(message.values["cmi.core.session_time"]).toBe("0000:10:00.00");
+  });
+
+  it("measures a 2004 course that reports no session time, in the 1.2 name", () => {
+    const harness = fakeScope();
+    const relay = createHostRelay([], harness.scope);
+    harness.deliver(hello());
+
+    vi.advanceTimersByTime(3 * 60 * 1000);
+    relay.finish({ "cmi.completion_status": "completed" });
+
+    const [message] = harness.postMessage.mock.calls[1];
+    expect(message.values).toEqual({
+      "cmi.core.lesson_status": "completed",
+      "cmi.core.session_time": "0000:03:00.00",
+    });
   });
 });

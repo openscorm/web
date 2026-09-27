@@ -52,7 +52,7 @@ interface OperatorTenantsResponse {
 
 const PAGE_SIZE = 20;
 const ALL_EDITIONS = ["Commercial", "Community"];
-const ALL_TYPES = ["Trial", "Mini", "Starter", "Small", "Medium", "Large", "Custom"];
+const ALL_TYPES = ["Trial", "Mini", "Starter", "Small", "Medium", "Large", "Provider", "Custom"];
 const SORTS = [
   ["created", "Sort: newest first"],
   ["name", "Sort: name"],

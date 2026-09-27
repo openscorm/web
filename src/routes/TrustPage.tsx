@@ -22,19 +22,19 @@ const STATUS_VARIANT: Record<ControlStatus, "success" | "warning" | "secondary" 
   "in-place": "success",
   "in-progress": "warning",
   planned: "secondary",
-  // Green (Dan, 2026-09-17). Regular internal penetration testing is work we
+  // Green (ruled 2026-09-17). Regular internal penetration testing is work we
   // actually do, so it reads as a pass rather than a gap. The label says
   // Internal and the card body names who performs it and says the third-party
   // engagement is still only being evaluated, so the color does not carry a
   // claim the words withhold.
   internal: "success",
-  // Green (Dan, 2026-09-17). For a buyer with a residency requirement the
+  // Green (ruled 2026-09-17). For a buyer with a residency requirement the
   // answer is yes under a scoped conversation, and grey would read as no. The
   // label says Available upon request rather than In place, so the color
   // promises a conversation rather than a region already provisioned.
   "on-request": "success",
   "not-claimed": "outline",
-  // Green, and deliberately (Dan, 2026-09-10). Infrastructure-level
+  // Green, and deliberately (ruled 2026-09-10). Infrastructure-level
   // compliance is what every client and prospect to date has actually
   // required, so in procurement it reads as a pass rather than as a
   // qualification. Application-level certification is planned for 2027 and no
@@ -109,7 +109,7 @@ export function TrustPage() {
                         variant={STATUS_VARIANT[control.status]}
                         className="w-fit shrink-0 whitespace-nowrap"
                       >
-                        {STATUS_LABEL[control.status]}
+                        {control.label ?? STATUS_LABEL[control.status]}
                       </Badge>
                     </CardContent>
                   </Card>

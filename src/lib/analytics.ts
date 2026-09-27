@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import posthog, { type CaptureResult } from "posthog-js";
 
 import type { MeResponse } from "@/lib/types";
 
@@ -60,6 +60,47 @@ export function resolveApiHost(host: string | null | undefined, origin: string):
   return host;
 }
 
+// URLs reach PostHog with their query string and fragment removed, on every
+// event. Some pages carry secrets there: the password reset, verification and
+// invitation links all carry tokens. Those pages are signed out, so they are
+// captured in anonymous mode, and PostHog stamps the current URL on every
+// event it sends, not only on pageviews. Stripping every URL, rather than
+// listing the sensitive pages, means a new page with a token in its link
+// cannot leak it to a third party by default.
+const URL_PROPERTIES = [
+  "$current_url",
+  "$referrer",
+  "$initial_current_url",
+  "$initial_referrer",
+  "$prev_pageview_url",
+] as const;
+
+export function stripUrl(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try {
+    const url = new URL(value);
+    return url.origin + url.pathname;
+  } catch {
+    // Not a URL ("$direct", an empty referrer): nothing to strip.
+    return value;
+  }
+}
+
+function stripUrlsIn(props: Record<string, unknown> | undefined): void {
+  if (!props) return;
+  for (const key of URL_PROPERTIES) {
+    if (key in props) props[key] = stripUrl(props[key]);
+  }
+}
+
+export function redactUrls(event: CaptureResult | null): CaptureResult | null {
+  if (!event) return event;
+  stripUrlsIn(event.properties);
+  stripUrlsIn(event.$set);
+  stripUrlsIn(event.$set_once);
+  return event;
+}
+
 function ensureInit(): boolean {
   if (initialized) return true;
   if (!config) return false;
@@ -77,6 +118,7 @@ function ensureInit(): boolean {
     // The no-storage condition, now actually reachable: nothing written to or read
     // from cookie, localStorage or sessionStorage.
     persistence: "memory",
+    before_send: redactUrls,
   });
   initialized = true;
   return true;
@@ -129,7 +171,7 @@ export function capture(event: string, props?: Record<string, unknown>): void {
 }
 
 export function capturePageview(url: string): void {
-  if (mode !== "off") posthog.capture("$pageview", { $current_url: url });
+  if (mode !== "off") posthog.capture("$pageview", { $current_url: stripUrl(url) });
 }
 
 // distinct_id is the stable accountId; the tenant is a PostHog group for

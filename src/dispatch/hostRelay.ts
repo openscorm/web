@@ -13,8 +13,9 @@
 //
 // Separate module from shim.ts so it can be tested without booting the shim.
 
-import { toLegacyRelayModel } from "@/lib/scormCompletion";
-import type { DataModel } from "@/lib/scormDataModel";
+import { SESSION_TIME_12, toLegacyRelayModel } from "@/lib/scormCompletion";
+import { secondsToScormTime, type DataModel } from "@/lib/scormDataModel";
+import { createSessionClock, type SessionClock } from "@/lib/sessionDuration";
 
 export const SOURCE = "openscorm-dispatch";
 export const PROTOCOL_VERSION = 1;
@@ -76,7 +77,7 @@ export function isReportable(element: string, value: string): boolean {
   return true;
 }
 
-function pick(data: DataModel, elements: string[]): DataModel {
+function pick(data: DataModel, elements: string[], clock: SessionClock): DataModel {
   // Projected first, so a 2004 model is expressed in the names the host LMS
   // can store. A 1.2 model passes through the projection unchanged.
   const legacy = toLegacyRelayModel(data);
@@ -86,6 +87,17 @@ function pick(data: DataModel, elements: string[]): DataModel {
     const value = legacy[element];
     if (value !== undefined && isReportable(element, value)) values[element] = value;
   }
+
+  // The session player's rule, applied to the host. When the course
+  // reports no session time, the host is told the sitting we measured rather
+  // than nothing, which it would record as zero. A time the course did report
+  // always wins. A reported zero counts as nothing, because a 1.2 model starts
+  // out at zero and cannot say whether the course or the default put it there.
+  if (!(SESSION_TIME_12 in values)) {
+    const measured = secondsToScormTime(clock.elapsedSeconds());
+    if (isReportable(SESSION_TIME_12, measured)) values[SESSION_TIME_12] = measured;
+  }
+
   return values;
 }
 
@@ -109,7 +121,14 @@ export function hostAllowed(origin: string, domains: string[]): boolean {
 // loads, because the hello can arrive at any point after this frame's document
 // does, and an unanswered hello is a host LMS that never learns the course was
 // completed.
-export function createHostRelay(domains: string[], scope: Window = window): HostRelay {
+//
+// The clock starts here, before the course loads, which is the same moment the
+// runtime's own clock starts: shim.ts creates both at boot.
+export function createHostRelay(
+  domains: string[],
+  scope: Window = window,
+  clock: SessionClock = createSessionClock(),
+): HostRelay {
   // Nothing to relay to: this page was opened directly rather than framed by a
   // dispatch package. That is the manual test path, and the ordinary case in
   // development.
@@ -169,7 +188,12 @@ export function createHostRelay(domains: string[], scope: Window = window): Host
   });
 
   return {
-    progress: (data) => post("progress", pick(data, RELAYED_ELEMENTS)),
-    finish: (data) => post("finish", pick(data, RELAYED_ELEMENTS)),
+    progress: (data) => post("progress", pick(data, RELAYED_ELEMENTS, clock)),
+    finish: (data) => {
+      // The sitting ends when the course finishes, not when a late hello
+      // finally lets the queued finish go out.
+      clock.stop();
+      post("finish", pick(data, RELAYED_ELEMENTS, clock));
+    },
   };
 }

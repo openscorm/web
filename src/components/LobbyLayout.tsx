@@ -41,15 +41,15 @@ export function LobbyLayout({ children }: { children: ReactNode }) {
               Terms
             </a>
             <a href="https://www.openscorm.com/license" className="hover:text-foreground mr-4">
-              License (AGPL v3)
+              License
             </a>
             <a href="/THIRD-PARTY-NOTICES.txt" className="hover:text-foreground">
               Notices
             </a>
           </div>
           <div>
-            &copy; 2025-{new Date().getFullYear()} OpenSCORM. Open source under the GNU AGPL v3
-            license.
+            &copy; 2025-{new Date().getFullYear()} OpenSCORM. The OpenSCORM web client is open
+            source under the GNU AGPL v3.
           </div>
         </div>
       </footer>

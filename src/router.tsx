@@ -18,6 +18,7 @@ import { OperatorTenantDetailPage } from "@/routes/OperatorTenantDetailPage";
 import { OperatorAccountsPage } from "@/routes/OperatorAccountsPage";
 import { OperatorAccountDetailPage } from "@/routes/OperatorAccountDetailPage";
 import { OperatorDuplicateAccountsPage } from "@/routes/OperatorDuplicateAccountsPage";
+import { OperatorMeterHistoryPage } from "@/routes/OperatorMeterHistoryPage";
 import { OperatorMeterReportPage } from "@/routes/OperatorMeterReportPage";
 import { OperatorMergeAccountsPage } from "@/routes/OperatorMergeAccountsPage";
 import { OperatorDashboardPage } from "@/routes/OperatorDashboardPage";
@@ -179,6 +180,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireOperator>
         <OperatorMeterReportPage />
+      </RequireOperator>
+    ),
+  },
+  {
+    path: "/operator/reports/meter/:tenantKey",
+    element: (
+      <RequireOperator>
+        <OperatorMeterHistoryPage />
       </RequireOperator>
     ),
   },

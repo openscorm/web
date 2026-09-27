@@ -211,3 +211,72 @@ describe("resolveApiHost", () => {
     expect(resolveApiHost(null, "https://x")).toBe(DEFAULT_POSTHOG_HOST);
   });
 });
+
+// Signed-out pages carry secrets in their links: the password reset link holds
+// the tenant login, the email and a live reset token, and PostHog stamps the
+// current URL on every event. Every URL leaves with its query and fragment
+// removed, whatever the page.
+describe("URL redaction", () => {
+  const reset =
+    "https://app.openscorm.com/reset?username=acme%2Fada%40acme.test&email=ada%40acme.test&token=secret-token";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("installs the redaction as PostHog's before_send", async () => {
+    const mod = await load();
+    mod.applyAnalyticsUser(null);
+
+    const options = ph.init.mock.calls[0][1] as { before_send: unknown };
+    expect(options.before_send).toBe(mod.redactUrls);
+  });
+
+  it("sends a signed-out pageview of the reset link without its query", async () => {
+    const mod = await load();
+    mod.applyAnalyticsUser(null);
+    ph.capture.mockClear();
+
+    mod.capturePageview(reset);
+
+    expect(ph.capture).toHaveBeenCalledWith("$pageview", {
+      $current_url: "https://app.openscorm.com/reset",
+    });
+  });
+
+  it("strips every URL property PostHog adds, on the event and the person", async () => {
+    const { redactUrls } = await load();
+
+    const out = redactUrls({
+      uuid: "u",
+      event: "$autocapture",
+      properties: {
+        $current_url: reset,
+        $referrer: "https://mail.example.test/open?token=abc#frag",
+        $prev_pageview_url: "https://app.openscorm.com/verify-email?token=verify-secret",
+        $pathname: "/reset",
+        other: "kept?as=is",
+      },
+      $set_once: { $initial_current_url: reset, $initial_referrer: "$direct" },
+    });
+
+    expect(out!.properties).toEqual({
+      $current_url: "https://app.openscorm.com/reset",
+      $referrer: "https://mail.example.test/open",
+      $prev_pageview_url: "https://app.openscorm.com/verify-email",
+      $pathname: "/reset",
+      other: "kept?as=is",
+    });
+    expect(out!.$set_once).toEqual({
+      $initial_current_url: "https://app.openscorm.com/reset",
+      $initial_referrer: "$direct",
+    });
+    expect(JSON.stringify(out)).not.toContain("secret");
+    expect(JSON.stringify(out)).not.toContain("acme.test");
+  });
+
+  it("passes a dropped event through as dropped", async () => {
+    const { redactUrls } = await load();
+    expect(redactUrls(null)).toBeNull();
+  });
+});

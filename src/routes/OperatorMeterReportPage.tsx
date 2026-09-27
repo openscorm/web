@@ -126,8 +126,9 @@ export function OperatorMeterReportPage() {
 
       <p className="text-muted-foreground/70 mb-4 text-xs">
         Nothing here is shown to customers or enforced yet. A hosted learner counts once per period;
-        each dispatch registration counts separately. Deactivated accounts and archived
-        registrations drop out of the count.
+        each dispatch registration counts separately. A learner who launched in a period still
+        counts for it after being deactivated or archived; only a no-tracking (test) registration
+        never counts.
       </p>
 
       <Card className="overflow-hidden">
@@ -145,17 +146,18 @@ export function OperatorMeterReportPage() {
               <TableHead>Pending move</TableHead>
               <TableHead>Resets</TableHead>
               <TableHead>Anchor</TableHead>
+              <TableHead>History</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {report.isLoading && <TableStateRow colSpan={11}>Loading…</TableStateRow>}
+            {report.isLoading && <TableStateRow colSpan={12}>Loading…</TableStateRow>}
             {report.isError && (
-              <TableStateRow colSpan={11} tone="danger">
+              <TableStateRow colSpan={12} tone="danger">
                 Failed to load the meter report
               </TableStateRow>
             )}
             {report.data && rows.length === 0 && (
-              <TableStateRow colSpan={11}>No learners launched in either period</TableStateRow>
+              <TableStateRow colSpan={12}>No learners launched in either period</TableStateRow>
             )}
             {rows.map((t) => (
               <TableRow key={t.tenantKey}>
@@ -195,6 +197,14 @@ export function OperatorMeterReportPage() {
                 <TableCell>{formatDate(t.periodResetsAt)}</TableCell>
                 <TableCell>
                   {t.periodAnchor === "subscription" ? "Subscription" : "Created"}
+                </TableCell>
+                <TableCell>
+                  <Link
+                    to={`/operator/reports/meter/${t.tenantKey}`}
+                    className="text-link hover:underline"
+                  >
+                    View
+                  </Link>
                 </TableCell>
               </TableRow>
             ))}
