@@ -186,6 +186,8 @@ function PlanCard({ data }: { data: DashboardResponse }) {
               <Gauge
                 label="Active learners this period"
                 count={c.meter.current}
+                // One click from the number to the names (FR2.1).
+                href="/reports?period=current&from=dashboard_card"
                 limit={c.meter.limit ?? 0}
                 unlimited={c.meter.limit === null}
                 isOver={c.meter.state === "over" || c.meter.state === "sustained"}
@@ -323,6 +325,7 @@ function Gauge({
   unlimited,
   isOver,
   isNear,
+  href,
 }: {
   label: string;
   count: number;
@@ -330,13 +333,22 @@ function Gauge({
   unlimited: boolean;
   isOver: boolean;
   isNear: boolean;
+  href?: string;
 }) {
+  const shown = href ? (
+    <Link to={href} className="text-link hover:underline">
+      {count.toLocaleString()}
+    </Link>
+  ) : (
+    count.toLocaleString()
+  );
+
   if (unlimited) {
     return (
       <div>
         <div className="mb-1.5 flex items-baseline justify-between">
           <span className="text-sm font-medium">{label}</span>
-          <span className="text-muted-foreground text-sm">{count.toLocaleString()} (no cap)</span>
+          <span className="text-muted-foreground text-sm">{shown} (no cap)</span>
         </div>
         <div className="bg-muted h-2 overflow-hidden rounded-full">
           <div className="bg-muted-foreground/30 h-full w-full" />
@@ -353,7 +365,7 @@ function Gauge({
       <div className="mb-1.5 flex items-baseline justify-between">
         <span className="text-sm font-medium">{label}</span>
         <span className="text-muted-foreground text-sm">
-          {count.toLocaleString()} of {limit.toLocaleString()}
+          {shown} of {limit.toLocaleString()}
           {isOver ? " — over limit" : ""}
         </span>
       </div>

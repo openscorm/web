@@ -144,6 +144,23 @@ describe("Dashboard capacity card under the active-learner meter", () => {
     expect(screen.getByText(/Resets 2026-10-10/)).toBeInTheDocument();
   });
 
+  // FR2.1: one click from the number to the names.
+  it("links the period count to the learners behind it", async () => {
+    stubFetch(dashboard(meter({ current: 40 })));
+    renderPage();
+
+    const link = await screen.findByRole("link", { name: "40" }, { timeout: 3000 });
+    expect(link).toHaveAttribute("href", "/reports?period=current&from=dashboard_card");
+  });
+
+  it("leaves the users count unlinked while the meter is off", async () => {
+    stubFetch(dashboard(null));
+    renderPage();
+
+    await screen.findByText("Users", { selector: "span" });
+    expect(screen.queryByRole("link", { name: "64" })).not.toBeInTheDocument();
+  });
+
   it("says the numbers, says access continues, and names the tier that fits", async () => {
     stubFetch(dashboard(meter({ current: 140, state: "over", fittingTier: "Starter" })));
     renderPage();

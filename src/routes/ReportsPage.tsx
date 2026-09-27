@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, ApiError, download } from "@/lib/api";
-import { formatDateTime } from "@/lib/dates";
+import { capture } from "@/lib/analytics";
+import { formatDate, formatDateTime } from "@/lib/dates";
 import type { ProblemResponse } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
@@ -38,6 +39,11 @@ export function ReportsPage() {
   const { user } = useAuth();
   const tenantKey = user?.tenantKey;
 
+  // The billing period view (FR2.1) lives in the URL so the capacity card on
+  // the dashboard can open it with one click. The other filters stay local.
+  const [params, setParams] = useSearchParams();
+  const period = parsePeriod(params.get("period"));
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [courseKey, setCourseKey] = useState("");
@@ -57,7 +63,7 @@ export function ReportsPage() {
   const list = useQuery({
     queryKey: ["tenants", tenantKey, "reports", "records", filters, page],
     queryFn: async () => api<RecordsResponse>(`/api/tenants/${tenantKey}/reports/records?${query}`),
-    enabled: !!tenantKey,
+    enabled: !!tenantKey && !period,
     placeholderData: keepPreviousData,
   });
 
@@ -105,6 +111,7 @@ export function ReportsPage() {
         `/api/tenants/${tenantKey}/reports/records.csv?${exportQuery}`,
         "learner-records.csv",
       );
+      capture("report_exported", { report: "records" });
     } catch (err) {
       const message =
         err instanceof ApiError && err.problem
@@ -137,98 +144,338 @@ export function ReportsPage() {
         ]}
       />
 
+      <div className="mb-6 max-w-xs">
+        <label htmlFor="period" className="mb-1.5 block text-sm font-medium">
+          Billing period
+        </label>
+        <select
+          id="period"
+          value={period ?? ""}
+          onChange={(e) => setParams(e.target.value ? { period: e.target.value } : {})}
+          className={inputClass}
+        >
+          <option value="">All activity</option>
+          <option value="current">Active this billing period</option>
+          <option value="previous">Previous billing period</option>
+        </select>
+      </div>
+
+      {period && tenantKey ? (
+        <ActiveLearnersPanel tenantKey={tenantKey} period={period} />
+      ) : (
+        <>
+          <div className="border-border bg-card text-card-foreground mb-6 rounded-xl border p-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label htmlFor="search" className="mb-1.5 block text-sm font-medium">
+                  Search
+                </label>
+                <input
+                  id="search"
+                  type="search"
+                  placeholder="Learner or course"
+                  value={search}
+                  onChange={(e) => applyFilter(setSearch)(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="course" className="mb-1.5 block text-sm font-medium">
+                  Course
+                </label>
+                <select
+                  id="course"
+                  value={courseKey}
+                  onChange={(e) => applyFilter(setCourseKey)(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">All courses</option>
+                  {courses.data?.map((c) => (
+                    <option key={c.courseKey} value={c.courseKey}>
+                      {c.title || c.courseSlug}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {hasClients && (
+                <div>
+                  <label htmlFor="client" className="mb-1.5 block text-sm font-medium">
+                    Client organization
+                  </label>
+                  <select
+                    id="client"
+                    value={clientKey}
+                    onChange={(e) => applyFilter(setClientKey)(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">All clients</option>
+                    {clients.data?.map((c) => (
+                      <option key={c.clientKey} value={c.clientKey}>
+                        {c.clientName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label htmlFor="status" className="mb-1.5 block text-sm font-medium">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  value={status}
+                  onChange={(e) => applyFilter(setStatus)(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Any status</option>
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="from" className="mb-1.5 block text-sm font-medium">
+                  Active from
+                </label>
+                <input
+                  id="from"
+                  type="date"
+                  value={from}
+                  onChange={(e) => applyFilter(setFrom)(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="to" className="mb-1.5 block text-sm font-medium">
+                  Active to
+                </label>
+                <input
+                  id="to"
+                  type="date"
+                  value={to}
+                  onChange={(e) => applyFilter(setTo)(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={onDownload}
+                  disabled={downloading || list.isLoading}
+                  className={primaryBtn}
+                >
+                  {downloading ? "Preparing…" : "Download CSV"}
+                </button>
+              </div>
+            </div>
+
+            {downloadError && (
+              <div
+                role="alert"
+                className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+              >
+                {downloadError}
+              </div>
+            )}
+          </div>
+
+          <div className="border-border bg-card text-card-foreground overflow-hidden rounded-xl border">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted text-muted-foreground text-left">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Learner</th>
+                    <th className="px-4 py-3 font-medium">Course</th>
+                    {hasDocuments && <th className="px-4 py-3 font-medium">Version</th>}
+                    {hasClients && <th className="px-4 py-3 font-medium">Client</th>}
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Score</th>
+                    <th className="px-4 py-3 font-medium">Time spent</th>
+                    <th className="px-4 py-3 font-medium">Last activity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.isLoading && (
+                    <tr>
+                      <td
+                        colSpan={columnCount}
+                        className="text-muted-foreground px-4 py-6 text-center"
+                      >
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+                  {!list.isLoading && rows.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={columnCount}
+                        className="text-muted-foreground px-4 py-6 text-center"
+                      >
+                        No records match these filters
+                      </td>
+                    </tr>
+                  )}
+                  {rows.map((r) => (
+                    <tr key={r.enrollmentKey} className="border-border border-t">
+                      <td className="px-4 py-3">
+                        {r.accountKey != null ? (
+                          <Link
+                            to={`/reports/learners/${r.accountKey}`}
+                            className="text-link hover:underline"
+                          >
+                            {r.learnerName}
+                          </Link>
+                        ) : (
+                          // Dispatch registration: an external learner with no
+                          // account, so no learner detail page exists.
+                          <span>{r.learnerName || "External learner"}</span>
+                        )}
+                        <div className="text-muted-foreground/70 text-xs">{r.learnerEmail}</div>
+                      </td>
+                      <td className="px-4 py-3">{r.courseTitle || r.courseSlug}</td>
+                      {hasDocuments && (
+                        <td className="px-4 py-3 font-mono">{r.documentVersion ?? "—"}</td>
+                      )}
+                      {hasClients && <td className="px-4 py-3">{r.clientName ?? "—"}</td>}
+                      <td className="px-4 py-3">
+                        <StatusBadge status={r.status} />
+                      </td>
+                      <td className="px-4 py-3 font-mono">{r.score || "—"}</td>
+                      <td className="px-4 py-3 font-mono">{r.duration || "—"}</td>
+                      <td className="text-muted-foreground px-4 py-3 font-mono text-xs">
+                        {formatDateTime(r.lastActivityAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <TablePager
+              page={list.data?.page ?? page}
+              pageSize={list.data?.pageSize ?? PAGE_SIZE}
+              total={list.data?.total ?? 0}
+              onPageChange={setPage}
+            />
+          </div>
+        </>
+      )}
+    </AppShell>
+  );
+}
+
+type BillingPeriod = "current" | "previous";
+
+interface ActiveLearner {
+  type: "hosted" | "dispatch";
+  accountKey: number | null;
+  registrationKey: number | null;
+  // Null for a dispatch learner whose host relayed no name; the relayed
+  // learner id stands in for it.
+  learnerName: string | null;
+  email: string | null;
+  externalLearnerId: string | null;
+  clientName: string | null;
+  courseTitle: string | null;
+  firstLaunchAt: string;
+  status: "Active" | "Deactivated" | "Archived";
+}
+
+interface ActiveLearnersResponse {
+  period: BillingPeriod;
+  periodStartsAt: string;
+  periodEndsAt: string;
+  // The number on the capacity card. Equals total whenever no search is
+  // applied, which is the acceptance criterion for this view.
+  meterCount: number;
+  page: number;
+  pageSize: number;
+  total: number;
+  learners: ActiveLearner[];
+}
+
+// FR2.1: the learners the meter counts in one billing period, one row per
+// learner rather than per record, so the list reconciles to the capacity card.
+// Deactivated and archived learners stay listed for a period they launched in,
+// because they still count for it.
+function ActiveLearnersPanel({ tenantKey, period }: { tenantKey: number; period: BillingPeriod }) {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const query = new URLSearchParams({ period, page: String(page), page_size: String(PAGE_SIZE) });
+  if (search) query.set("search", search);
+
+  const list = useQuery({
+    queryKey: ["tenants", tenantKey, "reports", "active-learners", period, search, page],
+    queryFn: async () =>
+      api<ActiveLearnersResponse>(`/api/tenants/${tenantKey}/reports/active-learners?${query}`),
+    placeholderData: keepPreviousData,
+  });
+
+  async function onDownload() {
+    setDownloadError(null);
+    setDownloading(true);
+    try {
+      const exportQuery = new URLSearchParams({ period });
+      if (search) exportQuery.set("search", search);
+      await download(
+        `/api/tenants/${tenantKey}/reports/active-learners.csv?${exportQuery}`,
+        "active-learners.csv",
+      );
+      capture("report_exported", { report: "active_learners", period });
+    } catch (err) {
+      const message =
+        err instanceof ApiError && err.problem
+          ? ((err.problem as ProblemResponse).detail ??
+            (err.problem as ProblemResponse).title ??
+            "Download failed.")
+          : "Download failed.";
+      setDownloadError(message);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const data = list.data;
+  const rows = data?.learners ?? [];
+  const columnCount = 5;
+
+  return (
+    <>
       <div className="border-border bg-card text-card-foreground mb-6 rounded-xl border p-6">
+        {data && (
+          <div className="mb-4">
+            <div className="text-lg font-semibold">
+              {data.meterCount.toLocaleString()} active{" "}
+              {data.meterCount === 1 ? "learner" : "learners"}
+            </div>
+            <div className="text-muted-foreground text-sm">
+              Started <span className="font-mono">{formatDate(data.periodStartsAt)}</span>.{" "}
+              {period === "current" ? "Resets" : "Ended"}{" "}
+              <span className="font-mono">{formatDate(data.periodEndsAt)}</span>.
+            </div>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Hosted learners count once per period. Each dispatch registration counts separately.
+            </p>
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label htmlFor="search" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor="active-search" className="mb-1.5 block text-sm font-medium">
               Search
             </label>
             <input
-              id="search"
+              id="active-search"
               type="search"
-              placeholder="Learner or course"
+              placeholder="Learner, client or course"
               value={search}
-              onChange={(e) => applyFilter(setSearch)(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="course" className="mb-1.5 block text-sm font-medium">
-              Course
-            </label>
-            <select
-              id="course"
-              value={courseKey}
-              onChange={(e) => applyFilter(setCourseKey)(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">All courses</option>
-              {courses.data?.map((c) => (
-                <option key={c.courseKey} value={c.courseKey}>
-                  {c.title || c.courseSlug}
-                </option>
-              ))}
-            </select>
-          </div>
-          {hasClients && (
-            <div>
-              <label htmlFor="client" className="mb-1.5 block text-sm font-medium">
-                Client organization
-              </label>
-              <select
-                id="client"
-                value={clientKey}
-                onChange={(e) => applyFilter(setClientKey)(e.target.value)}
-                className={inputClass}
-              >
-                <option value="">All clients</option>
-                {clients.data?.map((c) => (
-                  <option key={c.clientKey} value={c.clientKey}>
-                    {c.clientName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div>
-            <label htmlFor="status" className="mb-1.5 block text-sm font-medium">
-              Status
-            </label>
-            <select
-              id="status"
-              value={status}
-              onChange={(e) => applyFilter(setStatus)(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Any status</option>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="from" className="mb-1.5 block text-sm font-medium">
-              Active from
-            </label>
-            <input
-              id="from"
-              type="date"
-              value={from}
-              onChange={(e) => applyFilter(setFrom)(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="to" className="mb-1.5 block text-sm font-medium">
-              Active to
-            </label>
-            <input
-              id="to"
-              type="date"
-              value={to}
-              onChange={(e) => applyFilter(setTo)(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className={inputClass}
             />
           </div>
@@ -260,13 +507,10 @@ export function ReportsPage() {
             <thead className="bg-muted text-muted-foreground text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Learner</th>
+                <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Course</th>
-                {hasDocuments && <th className="px-4 py-3 font-medium">Version</th>}
-                {hasClients && <th className="px-4 py-3 font-medium">Client</th>}
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Score</th>
-                <th className="px-4 py-3 font-medium">Time spent</th>
-                <th className="px-4 py-3 font-medium">Last activity</th>
+                <th className="px-4 py-3 font-medium">Client</th>
+                <th className="px-4 py-3 font-medium">First launch this period</th>
               </tr>
             </thead>
             <tbody>
@@ -277,15 +521,25 @@ export function ReportsPage() {
                   </td>
                 </tr>
               )}
-              {!list.isLoading && rows.length === 0 && (
+              {list.isError && (
                 <tr>
                   <td colSpan={columnCount} className="text-muted-foreground px-4 py-6 text-center">
-                    No records match these filters
+                    Could not load active learners.
+                  </td>
+                </tr>
+              )}
+              {!list.isLoading && !list.isError && rows.length === 0 && (
+                <tr>
+                  <td colSpan={columnCount} className="text-muted-foreground px-4 py-6 text-center">
+                    No learners launched in this period
                   </td>
                 </tr>
               )}
               {rows.map((r) => (
-                <tr key={r.enrollmentKey} className="border-border border-t">
+                <tr
+                  key={r.accountKey != null ? `a${r.accountKey}` : `r${r.registrationKey}`}
+                  className="border-border border-t"
+                >
                   <td className="px-4 py-3">
                     {r.accountKey != null ? (
                       <Link
@@ -294,25 +548,27 @@ export function ReportsPage() {
                       >
                         {r.learnerName}
                       </Link>
+                    ) : r.learnerName ? (
+                      <span>{r.learnerName}</span>
                     ) : (
-                      // Dispatch registration: an external learner with no
-                      // account, so no learner detail page exists.
-                      <span>{r.learnerName || "External learner"}</span>
+                      <span className="font-mono">{r.externalLearnerId}</span>
                     )}
-                    <div className="text-muted-foreground/70 text-xs">{r.learnerEmail}</div>
+                    <div className="text-muted-foreground/70 text-xs">
+                      {r.type === "hosted" ? (
+                        r.email
+                      ) : (
+                        <>
+                          Host LMS ID <span className="font-mono">{r.externalLearnerId}</span>
+                        </>
+                      )}
+                      {r.status !== "Active" && <> · {r.status.toLowerCase()}</>}
+                    </div>
                   </td>
-                  <td className="px-4 py-3">{r.courseTitle || r.courseSlug}</td>
-                  {hasDocuments && (
-                    <td className="px-4 py-3 font-mono">{r.documentVersion ?? "—"}</td>
-                  )}
-                  {hasClients && <td className="px-4 py-3">{r.clientName ?? "—"}</td>}
-                  <td className="px-4 py-3">
-                    <StatusBadge status={r.status} />
-                  </td>
-                  <td className="px-4 py-3 font-mono">{r.score || "—"}</td>
-                  <td className="px-4 py-3 font-mono">{r.duration || "—"}</td>
+                  <td className="px-4 py-3">{r.type === "hosted" ? "Hosted" : "Dispatch"}</td>
+                  <td className="px-4 py-3">{r.courseTitle ?? "—"}</td>
+                  <td className="px-4 py-3">{r.clientName ?? "—"}</td>
                   <td className="text-muted-foreground px-4 py-3 font-mono text-xs">
-                    {formatDateTime(r.lastActivityAt)}
+                    {formatDateTime(r.firstLaunchAt)}
                   </td>
                 </tr>
               ))}
@@ -320,14 +576,18 @@ export function ReportsPage() {
           </table>
         </div>
         <TablePager
-          page={list.data?.page ?? page}
-          pageSize={list.data?.pageSize ?? PAGE_SIZE}
-          total={list.data?.total ?? 0}
+          page={data?.page ?? page}
+          pageSize={data?.pageSize ?? PAGE_SIZE}
+          total={data?.total ?? 0}
           onPageChange={setPage}
         />
       </div>
-    </AppShell>
+    </>
   );
+}
+
+function parsePeriod(value: string | null): BillingPeriod | null {
+  return value === "current" || value === "previous" ? value : null;
 }
 
 function buildQuery(values: {
