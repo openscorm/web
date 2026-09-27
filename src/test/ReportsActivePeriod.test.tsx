@@ -164,4 +164,28 @@ describe("Reports billing period view", () => {
     expect(requested.some((u) => u.includes("active-learners?period=previous"))).toBe(true);
     expect(screen.getByText(/Ended/)).toBeInTheDocument();
   });
+
+  // Found on test: the heading keeps the full count while a search narrows the
+  // rows, so an empty result must say the search found nobody, not that
+  // nobody launched.
+  it("says a search found nobody rather than that nobody launched", async () => {
+    stubFetch();
+    const inner = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) =>
+        String(input).includes("search=")
+          ? Promise.resolve(json({ ...activeLearners, total: 0, learners: [] }))
+          : inner(input),
+      ),
+    );
+    renderAt("/reports?period=current");
+
+    await screen.findByText("3 active learners", {}, { timeout: 3000 });
+    await userEvent.type(screen.getByLabelText("Search"), "nobody");
+
+    expect(await screen.findByText("No learners match this search")).toBeInTheDocument();
+    expect(screen.getByText("3 active learners")).toBeInTheDocument();
+    expect(screen.queryByText("No learners launched in this period")).not.toBeInTheDocument();
+  });
 });

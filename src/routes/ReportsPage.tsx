@@ -531,7 +531,12 @@ function ActiveLearnersPanel({ tenantKey, period }: { tenantKey: number; period:
               {!list.isLoading && !list.isError && rows.length === 0 && (
                 <tr>
                   <td colSpan={columnCount} className="text-muted-foreground px-4 py-6 text-center">
-                    No learners launched in this period
+                    {/* The heading still shows the full count while a search
+                        narrows the rows, so an empty search must not claim
+                        nobody launched. */}
+                    {search
+                      ? "No learners match this search"
+                      : "No learners launched in this period"}
                   </td>
                 </tr>
               )}
