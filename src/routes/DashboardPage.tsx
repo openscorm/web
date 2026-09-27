@@ -202,7 +202,7 @@ function PlanCard({ data }: { data: DashboardResponse }) {
           ) : (
             <div>
               <Gauge
-                label="Accounts"
+                label="Users"
                 count={c.userCount}
                 limit={c.userLimit}
                 unlimited={c.isUsersUnlimited}
@@ -217,7 +217,7 @@ function PlanCard({ data }: { data: DashboardResponse }) {
               )}
               {data.tenantType === "Trial" && c.isUsersOverLimit && (
                 <div className="text-muted-foreground mt-1.5 text-xs">
-                  Free includes {c.userLimit.toLocaleString()} accounts. The{" "}
+                  Free includes {c.userLimit.toLocaleString()} users. The{" "}
                   {c.userCount.toLocaleString()} you already have keep working, and you can add
                   another once you are back under {c.userLimit.toLocaleString()}.
                 </div>

@@ -123,24 +123,24 @@ function renderPage() {
 }
 
 describe("Dashboard capacity card under the active-learner meter", () => {
-  it("shows the accounts gauge and no period while the meter is off", async () => {
+  it("shows the users gauge and no period while the meter is off", async () => {
     stubFetch(dashboard(null));
     renderPage();
 
-    // "Accounts" is also a nav link in the shell, so the gauge is matched by its
-    // own label element rather than by text anywhere on the page.
-    expect(await screen.findByText("Accounts", { selector: "span" })).toBeInTheDocument();
+    // Matched by the gauge's own label element, so a nav link or a sentence
+    // that says "users" cannot satisfy it.
+    expect(await screen.findByText("Users", { selector: "span" })).toBeInTheDocument();
     expect(screen.queryByText("Active learners this period")).not.toBeInTheDocument();
   });
 
-  it("replaces the accounts gauge with the period count and reset date", async () => {
+  it("replaces the users gauge with the period count and reset date", async () => {
     stubFetch(dashboard(meter()));
     renderPage();
 
     expect(
       await screen.findByText("Active learners this period", {}, { timeout: 3000 }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Accounts", { selector: "span" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Users", { selector: "span" })).not.toBeInTheDocument();
     expect(screen.getByText(/Resets 2026-10-10/)).toBeInTheDocument();
   });
 
