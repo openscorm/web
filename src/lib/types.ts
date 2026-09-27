@@ -15,6 +15,9 @@ export interface PublicConfig {
   // Optional: a config cached before it shipped omits it.
   posthogUiHost?: string;
   environment: string;
+  // The roster's CSV import. Optional: a config cached before it shipped
+  // omits it, and absent reads as off.
+  bulkImport?: boolean;
 }
 
 // The stored consent as the server reports it on /me: null

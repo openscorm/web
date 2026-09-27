@@ -40,6 +40,7 @@ export const router = createBrowserRouter([
   { path: "/register", element: <RegisterPage /> },
   { path: "/forgot", element: <ForgotPasswordPage /> },
   { path: "/reset", element: <ResetPasswordPage /> },
+  { path: "/welcome", element: <ResetPasswordPage variant="welcome" /> },
   { path: "/verify-email", element: <VerifyEmailPage /> },
   { path: "/enroll", element: <EnrollPage /> },
   {

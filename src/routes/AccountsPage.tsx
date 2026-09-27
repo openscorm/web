@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
-import type { ProblemResponse } from "@/lib/types";
+import type { ProblemResponse, PublicConfig } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { LearnerImportCard } from "@/components/LearnerImportCard";
 
 interface AccountRow {
   accountKey: number;
@@ -97,6 +98,13 @@ export function AccountsPage() {
     },
     enabled: !!tenantKey,
     placeholderData: (previous) => previous,
+  });
+
+  // The import is dark behind a server flag; the card appears when it is on.
+  const config = useQuery({
+    queryKey: ["public-config"],
+    queryFn: () => api<PublicConfig>("/api/public/config"),
+    staleTime: Infinity,
   });
 
   const { register, handleSubmit, reset, formState } = useForm<CreateFormValues>({
@@ -217,6 +225,8 @@ export function AccountsPage() {
           </div>
         </form>
       </Card>
+
+      {config.data?.bulkImport && tenantKey && <LearnerImportCard tenantKey={tenantKey} />}
 
       <Card className="overflow-hidden">
         <div className="border-border border-b px-4 py-3">
