@@ -273,8 +273,9 @@ export const TRUST_SECTIONS: TrustSection[] = [
 // asks for. Hosting is Azure today (a move to a container host is planned and
 // is not a fact until it ships). Locations mirror the DPA subprocessor annex.
 // Not listed on purpose: our own uptime and version monitor,
-// which receives no customer or learner data; Loops (email service) is
-// prospective and joins the table only when it goes live.
+// which receives no customer or learner data. Loops joined on 2026-09-27,
+// ahead of any customer send, so the DPA clause 5.2 notice runs before
+// lifecycle email reaches a customer.
 export const SUBPROCESSORS: Subprocessor[] = [
   {
     name: "Microsoft Azure",
@@ -299,6 +300,12 @@ export const SUBPROCESSORS: Subprocessor[] = [
     purpose: "Transactional email (verification and password reset)",
     location: "United States",
     data: "Recipient email address and message contents",
+  },
+  {
+    name: "Loops",
+    purpose: "Lifecycle email",
+    location: "United States",
+    data: "Customer contact data only",
   },
   {
     name: "PostHog",
