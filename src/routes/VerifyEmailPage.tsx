@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import { LobbyLayout } from "@/components/LobbyLayout";
@@ -13,6 +14,7 @@ export function VerifyEmailPage() {
   const [params] = useSearchParams();
   const token = params.get("token");
   const [status, setStatus] = useState<"verifying" | "done" | "error">("verifying");
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let cancelled = false;
@@ -26,6 +28,10 @@ export function VerifyEmailPage() {
           method: "POST",
           body: JSON.stringify({ token }),
         });
+        // The signed-in account's cached answer still says unverified, and
+        // useAuth never refetches it on its own, so the banner would stay up
+        // until a reload.
+        await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
         if (!cancelled) setStatus("done");
       } catch {
         if (!cancelled) setStatus("error");
@@ -35,7 +41,7 @@ export function VerifyEmailPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, queryClient]);
 
   return (
     <LobbyLayout>

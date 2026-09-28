@@ -14,6 +14,12 @@ export function useAuth() {
       }
     },
     staleTime: Infinity,
+    // An unverified account is usually verified from another tab, the one the
+    // email link opens, which this cache never hears about. Asking again on
+    // focus while unverified is what clears the verify banner in the tab left
+    // behind. "always" because the answer is never stale by staleTime; once
+    // the account reads verified this is false and focus costs nothing.
+    refetchOnWindowFocus: (query) => (query.state.data?.emailVerified === false ? "always" : false),
   });
   // fetching is exposed separately from loading because a signed-out visit
   // caches null, and null counts as data: isLoading goes false while a
