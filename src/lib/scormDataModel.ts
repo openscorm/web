@@ -308,10 +308,11 @@ export function createScormApi(opts: ScormApiOptions): ScormRuntime {
           }
           dataModel[element] = value;
           sessionTimeReported = true;
-          dataModel["cmi.core.total_time"] = accumulateTotalTime(
-            dataModel["cmi.core.total_time"],
-            value,
-          );
+          // Recomputed from the sitting's starting total, never added to the
+          // running one. Many SCOs rewrite a cumulative session_time on every
+          // commit, and adding each write counted the same minutes again and
+          // again: one three-hour sitting was stored as 206 hours.
+          dataModel["cmi.core.total_time"] = accumulateTotalTime(totalTimeAtStart, value);
           break;
 
         case "cmi.core.lesson_location":

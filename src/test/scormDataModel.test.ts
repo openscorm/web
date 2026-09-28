@@ -137,13 +137,31 @@ describe("write validation", () => {
     expect(api.LMSGetValue("cmi.core.student_id")).toBe("42");
   });
 
-  it("accumulates session_time into total_time", () => {
+  it("adds session_time to the total the sitting started with", () => {
     const { api } = makeApi();
     api.LMSInitialize("");
     expect(api.LMSSetValue("cmi.core.session_time", "00:10:30")).toBe("true");
     expect(api.LMSGetValue("cmi.core.total_time")).toBe("0000:10:30.00");
+  });
+
+  it("recomputes rather than accumulates when session_time is set again", () => {
+    // A SCO that reports a cumulative session_time on every commit must not
+    // have each report added on top of the last.
+    const { api } = makeApi();
+    api.LMSInitialize("");
+    api.LMSSetValue("cmi.core.session_time", "00:10:30");
+    api.LMSSetValue("cmi.core.session_time", "00:20:00");
     expect(api.LMSSetValue("cmi.core.session_time", "01:00:00")).toBe("true");
-    expect(api.LMSGetValue("cmi.core.total_time")).toBe("0001:10:30.00");
+    expect(api.LMSGetValue("cmi.core.total_time")).toBe("0001:00:00.00");
+  });
+
+  it("keeps prior sessions when session_time is set more than once", () => {
+    const { api, commits } = makeApi({ initialData: { "cmi.core.total_time": "0002:00:00" } });
+    api.LMSInitialize("");
+    api.LMSSetValue("cmi.core.session_time", "00:30:00");
+    api.LMSSetValue("cmi.core.session_time", "00:59:01.29");
+    api.LMSFinish("");
+    expect(commits[commits.length - 1]["cmi.core.total_time"]).toBe("0002:59:01.29");
   });
 });
 
