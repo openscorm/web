@@ -201,10 +201,23 @@ export function InvitationLinksSection({
       <ConfirmDialog
         open={revoking !== null}
         onOpenChange={(open) => {
-          if (!open) setRevoking(null);
+          if (!open) {
+            setRevoking(null);
+            revoke.reset();
+          }
         }}
         title="Revoke link?"
-        description="Anyone who opens this link will no longer be able to enroll. Learners already enrolled through it keep their access. This cannot be undone."
+        description={
+          <>
+            Anyone who opens this link will no longer be able to enroll. Learners already enrolled
+            through it keep their access. This cannot be undone.
+            {revoke.isError && (
+              <span role="alert" className="mt-3 block text-red-700 dark:text-red-400">
+                Could not revoke this link. Reload the page and try again.
+              </span>
+            )}
+          </>
+        }
         confirmLabel="Revoke link"
         busyLabel="Revoking…"
         tone="danger"

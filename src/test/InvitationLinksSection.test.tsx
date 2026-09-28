@@ -111,3 +111,37 @@ describe("InvitationLinksSection", () => {
     expect(await screen.findByText("Revoked")).toBeInTheDocument();
   });
 });
+
+describe("InvitationLinksSection revoke failure", () => {
+  it("says so in the dialog when the revoke is refused", async () => {
+    // A session that changed underneath the page answers 403; the dialog
+    // must not just sit there looking as if the click missed.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        if (method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ status: 403, title: "Forbidden" }), {
+              status: 403,
+              headers: { "content-type": "application/problem+json" },
+            }),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify([link({})]), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      }),
+    );
+    renderSection();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Revoke" }));
+    await user.click(await screen.findByRole("button", { name: "Revoke link" }));
+
+    expect(await screen.findByText(/Could not revoke this link/)).toBeInTheDocument();
+  });
+});
