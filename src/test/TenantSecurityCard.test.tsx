@@ -42,6 +42,7 @@ beforeEach(() => {
     mfaScope: "all",
     mfaTrustDays: 30,
     linkRequiresVerifiedEmail: false,
+    invitationLinkDays: 0,
   };
   puts = [];
   vi.stubGlobal(
@@ -93,7 +94,13 @@ describe("TenantSecurityCard", () => {
       await screen.findByText("Required for all users. Public invitation links are off."),
     ).toBeInTheDocument();
     expect(puts).toEqual([
-      { mfaRequired: true, mfaScope: "all", mfaTrustDays: 30, linkRequiresVerifiedEmail: false },
+      {
+        mfaRequired: true,
+        mfaScope: "all",
+        mfaTrustDays: 30,
+        linkRequiresVerifiedEmail: false,
+        invitationLinkDays: 0,
+      },
     ]);
     expect(screen.getByLabelText("All users")).toBeChecked();
     expect(screen.getByText(/turns off this organization/)).toBeInTheDocument();
@@ -106,6 +113,7 @@ describe("TenantSecurityCard", () => {
       mfaScope: "managers",
       mfaTrustDays: 30,
       linkRequiresVerifiedEmail: false,
+      invitationLinkDays: 0,
     });
   });
 
@@ -125,7 +133,13 @@ describe("TenantSecurityCard", () => {
 
     await waitFor(() =>
       expect(puts).toEqual([
-        { mfaRequired: false, mfaScope: "all", mfaTrustDays: 0, linkRequiresVerifiedEmail: false },
+        {
+          mfaRequired: false,
+          mfaScope: "all",
+          mfaTrustDays: 0,
+          linkRequiresVerifiedEmail: false,
+          invitationLinkDays: 0,
+        },
       ]),
     );
     await waitFor(() => expect(screen.getByLabelText("Trusted devices")).toHaveValue("0"));

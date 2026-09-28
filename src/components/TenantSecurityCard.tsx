@@ -22,6 +22,7 @@ const fallback: TenantSecurityPolicy = {
   mfaScope: "all",
   mfaTrustDays: 30,
   linkRequiresVerifiedEmail: false,
+  invitationLinkDays: 0,
 };
 
 function describe(policy: TenantSecurityPolicy | undefined, loading: boolean): string {

@@ -40,6 +40,7 @@ beforeEach(() => {
     mfaScope: "managers",
     mfaTrustDays: 14,
     linkRequiresVerifiedEmail: false,
+    invitationLinkDays: 0,
   };
   puts = [];
   vi.stubGlobal(
@@ -85,6 +86,7 @@ describe("LinkVerificationCard", () => {
       mfaScope: "managers",
       mfaTrustDays: 14,
       linkRequiresVerifiedEmail: true,
+      invitationLinkDays: 0,
     });
     expect(
       await screen.findByText("Learners confirm their email before a link signs them in"),

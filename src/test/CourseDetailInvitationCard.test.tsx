@@ -66,14 +66,31 @@ beforeEach(() => {
   blocked = false;
   vi.stubGlobal(
     "fetch",
-    vi.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify(detail(blocked)), {
+    vi.fn((input: RequestInfo | URL) => {
+      // The links list carries the original link's URL; the detail carries
+      // whether links are blocked at all.
+      const body = String(input).endsWith("/invitation-links")
+        ? [
+            {
+              linkKey: 1,
+              isOriginal: true,
+              url: INVITATION_URL,
+              tokenPrefix: null,
+              createdAt: "2026-01-02T03:04:05Z",
+              createdByEmail: null,
+              expiresAt: null,
+              revokedAt: null,
+              status: "active",
+            },
+          ]
+        : detail(blocked);
+      return Promise.resolve(
+        new Response(JSON.stringify(body), {
           status: 200,
           headers: { "content-type": "application/json" },
         }),
-      ),
-    ),
+      );
+    }),
   );
 });
 

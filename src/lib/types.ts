@@ -120,6 +120,25 @@ export interface TenantSecurityPolicy {
   // When on, an invitation link emails a sign-in link instead of signing the
   // learner straight in.
   linkRequiresVerifiedEmail: boolean;
+  // Days a newly created invitation link lasts; 0 is never.
+  invitationLinkDays: InvitationLinkDays;
+}
+
+export type InvitationLinkDays = 0 | 30 | 90 | 180 | 365;
+
+// GET /api/tenants/{key}/courses/{key}/invitation-links. url is set for the
+// live original link, and on the reply that creates a link; a stored link's
+// token cannot be read again after that.
+export interface InvitationLink {
+  linkKey: number;
+  isOriginal: boolean;
+  url: string | null;
+  tokenPrefix: string | null;
+  createdAt: string;
+  createdByEmail: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  status: "active" | "expired" | "revoked";
 }
 
 // GET /api/tenants/{key}/api-keys. Every key the tenant

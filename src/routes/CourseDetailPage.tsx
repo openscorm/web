@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { InvitationLinksSection } from "@/components/InvitationLinksSection";
 
 interface CourseDetail {
   courseKey: number;
@@ -77,7 +78,6 @@ export function CourseDetailPage() {
   const [exitText, setExitText] = useState("Exit");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
-  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
 
@@ -486,43 +486,16 @@ export function CourseDetailPage() {
 
         <div className="space-y-6 lg:col-span-3">
           <div className="border-border bg-card text-card-foreground rounded-xl border p-5">
-            <h5 className="mb-2 font-semibold">Public invitation link</h5>
-            {/* The mandate switches these links off and the
-                enrollment page refuses to redeem one, so offering a copyable
-                URL here would hand a manager something that dead-ends for the
-                learner who opens it. */}
-            {c.publicInvitationBlocked ? (
-              <p className="text-muted-foreground text-sm">
-                Public invitation links are off because this organization requires two-factor
-                authentication for all users. Provision learners by direct invite instead.
-              </p>
-            ) : (
-              <>
-                <p className="text-muted-foreground mb-3 text-sm">
-                  Share this URL with learners as a course enrollment link. A learner receiving this
-                  link enters their name and email to start the course.
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="bg-muted flex-1 overflow-x-auto rounded px-3 py-2 text-xs">
-                    {c.publicInvitationUrl}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(c.publicInvitationUrl);
-                        setCopyStatus("Copied.");
-                        setTimeout(() => setCopyStatus(null), 1500);
-                      } catch {
-                        setCopyStatus("Copy failed.");
-                      }
-                    }}
-                    className={secondaryBtn}
-                  >
-                    {copyStatus ?? "Copy"}
-                  </button>
-                </div>
-              </>
+            <h5 className="mb-2 font-semibold">Public invitation links</h5>
+            {/* The mandate switches these links off and the enrollment page
+                refuses to redeem one, so offering a copyable URL here would hand
+                a manager something that dead-ends for the learner who opens it. */}
+            {tenantKey && (
+              <InvitationLinksSection
+                tenantKey={tenantKey}
+                courseKey={c.courseKey}
+                blocked={c.publicInvitationBlocked}
+              />
             )}
           </div>
 
