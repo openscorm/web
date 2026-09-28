@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/lib/api";
 import type { EnrollResponse, ProblemResponse } from "@/lib/types";
@@ -34,6 +34,9 @@ export function EnrollPage() {
   // Keeps the Start button disabled so a second click cannot re-POST the same
   // doomed enrollment; the capacity detail already renders in the alert.
   const [atCapacity, setAtCapacity] = useState(false);
+  // Set when the server answers 409: the email belongs to an account that
+  // signs in with a password, so an invitation link cannot open it.
+  const [accountExists, setAccountExists] = useState(false);
 
   const { register, handleSubmit, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -65,6 +68,7 @@ export function EnrollPage() {
         const problem = err.problem as ProblemResponse;
         setServerError(problem.detail ?? problem.title ?? "Enrollment failed.");
         if (problem.status === 402) setAtCapacity(true);
+        setAccountExists(problem.status === 409);
       } else {
         setServerError("Enrollment failed. Please try again.");
       }
@@ -100,6 +104,14 @@ export function EnrollPage() {
             className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
           >
             {serverError}
+            {accountExists && (
+              <>
+                {" "}
+                <Link to="/login" className="font-semibold underline">
+                  Sign in
+                </Link>
+              </>
+            )}
           </div>
         )}
 

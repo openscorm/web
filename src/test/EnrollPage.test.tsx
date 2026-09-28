@@ -40,14 +40,25 @@ function json(body: unknown) {
 }
 
 let enrollBody: unknown = learner;
+let enrollStatus = 200;
 
 beforeEach(() => {
   enrollBody = learner;
+  enrollStatus = 200;
   vi.stubGlobal(
     "fetch",
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith("/api/public/enroll")) return Promise.resolve(json(enrollBody));
+      if (url.endsWith("/api/public/enroll")) {
+        return Promise.resolve(
+          enrollStatus === 200
+            ? json(enrollBody)
+            : new Response(JSON.stringify(enrollBody), {
+                status: enrollStatus,
+                headers: { "content-type": "application/problem+json" },
+              }),
+        );
+      }
       if (url.endsWith("/api/auth/me")) return Promise.resolve(json(learner));
       return Promise.reject(new Error(`unexpected fetch: ${url}`));
     }),
@@ -72,6 +83,7 @@ function renderApp() {
           <Route path="/enroll" element={<EnrollPage />} />
           <Route path="/play/:courseKey" element={<div>Player body</div>} />
           <Route path="/courses" element={<div>Course listing body</div>} />
+          <Route path="/login" element={<div>Sign-in body</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -104,5 +116,26 @@ describe("EnrollPage invitation redirect", () => {
     await submitEnrollment();
 
     expect(await screen.findByText("Course listing body")).toBeInTheDocument();
+  });
+});
+
+describe("EnrollPage existing account", () => {
+  it("sends an email that already has a password account to sign in", async () => {
+    // An invitation link signs its holder in with no password, so the server
+    // refuses it for any account that has one, and nothing is signed in here.
+    enrollStatus = 409;
+    enrollBody = {
+      status: 409,
+      title: "Account already exists",
+      detail: "An account with this email already exists. Sign in to continue.",
+    };
+    renderApp();
+    await submitEnrollment();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("already exists");
+    expect(screen.queryByText("Player body")).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole("link", { name: "Sign in" }));
+    expect(await screen.findByText("Sign-in body")).toBeInTheDocument();
   });
 });
