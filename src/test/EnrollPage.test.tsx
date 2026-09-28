@@ -139,3 +139,18 @@ describe("EnrollPage existing account", () => {
     expect(await screen.findByText("Sign-in body")).toBeInTheDocument();
   });
 });
+
+describe("EnrollPage confirmed email", () => {
+  it("tells the learner to check their email and signs nobody in", async () => {
+    // The organization requires a confirmed email, so the server answers 202
+    // with the address it sent the sign-in link to.
+    enrollStatus = 202;
+    enrollBody = { verificationRequired: true, email: "alex@acme.test" };
+    renderApp();
+    await submitEnrollment();
+
+    expect(await screen.findByRole("heading", { name: "Check your email" })).toBeInTheDocument();
+    expect(screen.getByText("alex@acme.test")).toBeInTheDocument();
+    expect(screen.queryByText("Player body")).not.toBeInTheDocument();
+  });
+});

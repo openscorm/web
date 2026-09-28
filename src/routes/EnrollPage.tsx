@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/lib/api";
-import type { EnrollResponse, ProblemResponse } from "@/lib/types";
+import type { EnrollPendingResponse, EnrollResponse, ProblemResponse } from "@/lib/types";
 import { LobbyLayout } from "@/components/LobbyLayout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -37,6 +37,9 @@ export function EnrollPage() {
   // Set when the server answers 409: the email belongs to an account that
   // signs in with a password, so an invitation link cannot open it.
   const [accountExists, setAccountExists] = useState(false);
+  // Set when the organization requires a verified email: the server sent a
+  // sign-in link to this address instead of signing the learner in.
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -45,11 +48,15 @@ export function EnrollPage() {
 
   const enroll = useMutation({
     mutationFn: async (values: FormValues) =>
-      api<EnrollResponse>("/api/public/enroll", {
+      api<EnrollResponse | EnrollPendingResponse>("/api/public/enroll", {
         method: "POST",
         body: JSON.stringify({ account, course, token, ...values }),
       }),
     onSuccess: async (data) => {
+      if ("verificationRequired" in data) {
+        setPendingEmail(data.email);
+        return;
+      }
       // refetchType "all" for the same reason as LoginPage: no observer here.
       // /courses carries no guard today, so this is prevention rather than
       // a live fix, but the enroll response seeds the session the same way.
@@ -83,6 +90,24 @@ export function EnrollPage() {
           <p className="text-muted-foreground text-sm">
             The invitation link is missing required information. Ask the course owner for a new
             link.
+          </p>
+        </div>
+      </LobbyLayout>
+    );
+  }
+
+  if (pendingEmail) {
+    return (
+      <LobbyLayout>
+        <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">Check your email</h1>
+          <p className="text-muted-foreground text-sm">
+            We sent a link to <span className="font-semibold">{pendingEmail}</span>. Open it to
+            confirm your email and start the course. The link works for one hour.
+          </p>
+          <p className="text-muted-foreground mt-4 text-sm">
+            No email after a few minutes? Check your spam folder, or open your invitation link again
+            to get a new one.
           </p>
         </div>
       </LobbyLayout>

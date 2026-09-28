@@ -17,7 +17,12 @@ const secondaryBtn =
 const selectClass =
   "bg-background text-foreground focus:border-primary mt-1 block w-full rounded-lg border border-[color:var(--color-input-border)] px-3 py-2.5 text-[15px] transition-colors focus:ring-2 focus:ring-[color:var(--color-input-focus-ring)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60";
 
-const fallback: TenantSecurityPolicy = { mfaRequired: false, mfaScope: "all", mfaTrustDays: 30 };
+const fallback: TenantSecurityPolicy = {
+  mfaRequired: false,
+  mfaScope: "all",
+  mfaTrustDays: 30,
+  linkRequiresVerifiedEmail: false,
+};
 
 function describe(policy: TenantSecurityPolicy | undefined, loading: boolean): string {
   if (loading || !policy) return "Loading…";

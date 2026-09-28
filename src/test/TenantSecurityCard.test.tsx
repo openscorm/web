@@ -37,7 +37,12 @@ let stored: TenantSecurityPolicy;
 let puts: TenantSecurityPolicy[];
 
 beforeEach(() => {
-  stored = { mfaRequired: false, mfaScope: "all", mfaTrustDays: 30 };
+  stored = {
+    mfaRequired: false,
+    mfaScope: "all",
+    mfaTrustDays: 30,
+    linkRequiresVerifiedEmail: false,
+  };
   puts = [];
   vi.stubGlobal(
     "fetch",
@@ -87,14 +92,21 @@ describe("TenantSecurityCard", () => {
     expect(
       await screen.findByText("Required for all users. Public invitation links are off."),
     ).toBeInTheDocument();
-    expect(puts).toEqual([{ mfaRequired: true, mfaScope: "all", mfaTrustDays: 30 }]);
+    expect(puts).toEqual([
+      { mfaRequired: true, mfaScope: "all", mfaTrustDays: 30, linkRequiresVerifiedEmail: false },
+    ]);
     expect(screen.getByLabelText("All users")).toBeChecked();
     expect(screen.getByText(/turns off this organization/)).toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Managers and operators only"));
 
     expect(await screen.findByText("Required for managers and operators.")).toBeInTheDocument();
-    expect(puts[1]).toEqual({ mfaRequired: true, mfaScope: "managers", mfaTrustDays: 30 });
+    expect(puts[1]).toEqual({
+      mfaRequired: true,
+      mfaScope: "managers",
+      mfaTrustDays: 30,
+      linkRequiresVerifiedEmail: false,
+    });
   });
 
   // The window is offered whether or not the mandate is on, and a change
@@ -112,7 +124,9 @@ describe("TenantSecurityCard", () => {
     await user.selectOptions(select, "0");
 
     await waitFor(() =>
-      expect(puts).toEqual([{ mfaRequired: false, mfaScope: "all", mfaTrustDays: 0 }]),
+      expect(puts).toEqual([
+        { mfaRequired: false, mfaScope: "all", mfaTrustDays: 0, linkRequiresVerifiedEmail: false },
+      ]),
     );
     await waitFor(() => expect(screen.getByLabelText("Trusted devices")).toHaveValue("0"));
   });

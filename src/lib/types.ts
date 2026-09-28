@@ -117,6 +117,9 @@ export interface TenantSecurityPolicy {
   mfaRequired: boolean;
   mfaScope: MfaScope;
   mfaTrustDays: MfaTrustDays;
+  // When on, an invitation link emails a sign-in link instead of signing the
+  // learner straight in.
+  linkRequiresVerifiedEmail: boolean;
 }
 
 // GET /api/tenants/{key}/api-keys. Every key the tenant
@@ -195,6 +198,13 @@ export interface DevicesResponse {
 // listing, which is what it used to do.
 export interface EnrollResponse extends MeResponse {
   courseKey: number;
+}
+
+// The 202 from POST /api/public/enroll when the organization requires a
+// verified email: no session, and a sign-in link went to this address.
+export interface EnrollPendingResponse {
+  verificationRequired: true;
+  email: string;
 }
 
 export interface LoginRequest {

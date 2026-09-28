@@ -9,6 +9,7 @@ import { MfaProvisioning } from "@/components/MfaProvisioning";
 import { PageHeader } from "@/components/PageHeader";
 import { TenantApiKeysCard } from "@/components/TenantApiKeysCard";
 import { TenantSecurityCard } from "@/components/TenantSecurityCard";
+import { LinkVerificationCard } from "@/components/LinkVerificationCard";
 import { TenantWebhookCard } from "@/components/TenantWebhookCard";
 import { TrustedDevices } from "@/components/TrustedDevices";
 
@@ -265,6 +266,7 @@ export function SettingsPage() {
 
       {/* The tenant's sign-in policy: managers and operators only. */}
       {user && (user.isManager || user.isOperator) && <TenantSecurityCard user={user} />}
+      {user && (user.isManager || user.isOperator) && <LinkVerificationCard user={user} />}
 
       {/* Server-to-server keys for the public API: managers and
           operators only. The secret is shown once, at issuance, and never again. */}

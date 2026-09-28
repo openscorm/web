@@ -6,6 +6,7 @@ import { RegisterPage } from "@/routes/RegisterPage";
 import { ForgotPasswordPage } from "@/routes/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/routes/ResetPasswordPage";
 import { VerifyEmailPage } from "@/routes/VerifyEmailPage";
+import { EnrollVerifyPage } from "@/routes/EnrollVerifyPage";
 import { EnrollPage } from "@/routes/EnrollPage";
 import { DashboardPage } from "@/routes/DashboardPage";
 import { AccountsPage } from "@/routes/AccountsPage";
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
   { path: "/welcome", element: <ResetPasswordPage variant="welcome" /> },
   { path: "/verify-email", element: <VerifyEmailPage /> },
   { path: "/enroll", element: <EnrollPage /> },
+  { path: "/enroll/verify", element: <EnrollVerifyPage /> },
   {
     path: "/dashboard",
     element: (
