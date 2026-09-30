@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { RecordRow } from "@/lib/records";
+import { IDENTITY_NOT_RECORDED, type RecordRow } from "@/lib/records";
 
 interface LearnerDetail {
   accountKey: number;
@@ -36,6 +36,10 @@ interface LearnerDetail {
   isLearner: boolean;
   createdAt: string;
   authenticatedAt: string | null;
+
+  // When identity tracking began. A Not recorded row from before it gets a
+  // footnote saying so.
+  identityTrackedSince: string | null;
   records: RecordRow[];
 }
 
@@ -99,6 +103,15 @@ export function LearnerDetailPage() {
   }
 
   const learner = detail.data;
+
+  // A Not recorded row made before identity tracking began is explained by a
+  // footnote. One made after it (a single sign-on account, until that path is
+  // given a source) is not, because the footnote would be false for it.
+  const trackedSince = learner.identityTrackedSince;
+  const predatesTracking = (r: RecordRow) =>
+    r.identitySource === IDENTITY_NOT_RECORDED &&
+    trackedSince !== null &&
+    new Date(r.startedAt) < new Date(trackedSince);
 
   return (
     <AppShell align="left">
@@ -167,11 +180,13 @@ export function LearnerDetailPage() {
               <TableHead>Time spent</TableHead>
               <TableHead>Started</TableHead>
               <TableHead>Last activity</TableHead>
+              <TableHead>Identity source</TableHead>
+              <TableHead>Email verified</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {learner.records.length === 0 && (
-              <TableStateRow colSpan={6}>No learning records yet</TableStateRow>
+              <TableStateRow colSpan={8}>No learning records yet</TableStateRow>
             )}
             {learner.records.map((r) => (
               <TableRow key={r.enrollmentKey}>
@@ -192,11 +207,23 @@ export function LearnerDetailPage() {
                 <TableCell className="text-muted-foreground font-mono text-xs">
                   {formatDateTime(r.lastActivityAt)}
                 </TableCell>
+                <TableCell>
+                  {r.identitySource}
+                  {predatesTracking(r) && <span aria-hidden="true">*</span>}
+                </TableCell>
+                <TableCell>{r.emailVerified ? "Yes" : "No"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </Card>
+
+      {learner.records.some(predatesTracking) && (
+        <p className="text-muted-foreground mt-3 text-sm">
+          * Not recorded: this record predates identity tracking, added{" "}
+          <span className="font-mono">{formatDate(learner.identityTrackedSince)}</span>.
+        </p>
+      )}
     </AppShell>
   );
 }

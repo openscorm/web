@@ -38,7 +38,19 @@ export interface RecordRow {
   // hiding the cell: one tenant can hold both kinds.
   documentVersion: string | null;
   sourceType: string | null;
+
+  // How the learner's identity was established, already in words: "Admin",
+  // "Link", "LMS", "Import" or "Not recorded". Stored when the record is
+  // created, so a Not started row carries it too.
+  identitySource: string;
+
+  // Whether the learner's email was verified when the record completed, or
+  // now if it has not completed.
+  emailVerified: boolean;
 }
+
+// The label the API uses for a record with no identity source.
+export const IDENTITY_NOT_RECORDED = "Not recorded";
 
 // SCORM 1.2 cmi.core.lesson_status carries completion and pass/fail in one
 // field, which is why a single Status filter covers both.
