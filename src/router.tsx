@@ -30,6 +30,7 @@ import { MyCoursesPage } from "@/routes/MyCoursesPage";
 import { CourseDetailPage } from "@/routes/CourseDetailPage";
 import { PlayerPage } from "@/routes/PlayerPage";
 import { TrustPage } from "@/routes/TrustPage";
+import { SsoEntraDocPage } from "@/routes/SsoEntraDocPage";
 import { RequireManager } from "@/components/RequireManager";
 import { RequireDispatch } from "@/components/RequireDispatch";
 import { RequireOperator } from "@/components/RequireOperator";
@@ -214,6 +215,8 @@ export const router = createBrowserRouter([
   // Public Trust page. Reachable by URL but not yet linked from public chrome
   // or the marketing site.
   { path: "/trust", element: <TrustPage /> },
+  // Public help for a customer's IT department. Unlinked, like /trust.
+  { path: "/docs/sso", element: <SsoEntraDocPage /> },
   { path: "/ping", element: <PingPage /> },
   { path: "*", element: <Navigate to="/login" replace /> },
 ]);
