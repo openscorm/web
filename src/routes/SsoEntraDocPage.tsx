@@ -88,15 +88,18 @@ export function SsoEntraDocPage() {
             <ol className="list-decimal space-y-1 pl-5">
               <li>
                 Sign in to the{" "}
+                <ExternalLink href="https://portal.azure.com">Azure portal</ExternalLink> or the{" "}
                 <ExternalLink href="https://entra.microsoft.com">
                   Microsoft Entra admin center
                 </ExternalLink>
                 .
               </li>
               <li>
-                Go to <strong>Identity</strong> &gt; <strong>Applications</strong> &gt;{" "}
-                <strong>Enterprise applications</strong> and select <strong>New application</strong>
-                .
+                Open <strong>Enterprise applications</strong>. The quickest way is to type
+                "Enterprise applications" in the search bar at the top of the page.
+              </li>
+              <li>
+                On <strong>All applications</strong>, select <strong>New application</strong>.
               </li>
               <li>
                 Select <strong>Create your own application</strong>.
@@ -161,38 +164,34 @@ export function SsoEntraDocPage() {
 
           <Section id="step-3" heading="Step 3: Attributes and claims">
             <p>
-              OpenSCORM identifies every person by email address, so the sign-in must carry each
-              person's real email. Entra's default Name ID is the user principal name (UPN). That is
-              often not the same as the mailbox address.
+              OpenSCORM identifies every person by email address. It reads the{" "}
+              <Code>emailaddress</Code> claim, and falls back to the Unique User Identifier (Name
+              ID) only when that claim is missing. Entra's defaults already send what OpenSCORM
+              needs, so this step is a check rather than a change.
             </p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
-                On the SAML page, select <strong>Edit</strong> on{" "}
-                <strong>Attributes &amp; Claims</strong>.
+                On the SAML page, look at the <strong>Attributes &amp; Claims</strong> card.
               </li>
               <li>
-                Select <strong>Unique User Identifier (Name ID)</strong>.
+                Check that <Code>emailaddress</Code> comes from <Code>user.mail</Code>, which is the
+                default.
               </li>
               <li>
-                Set <strong>Name identifier format</strong> to <strong>Email address</strong> and{" "}
-                <strong>Source attribute</strong> to <Code>user.mail</Code>, then select{" "}
-                <strong>Save</strong>.
-              </li>
-              <li>
-                Leave the default <Code>emailaddress</Code>, <Code>givenname</Code> and{" "}
-                <Code>surname</Code> claims in place. OpenSCORM uses the given name and surname as
-                the person's display name.
+                Leave <Code>givenname</Code> and <Code>surname</Code> in place. OpenSCORM uses them
+                as the person's display name.
               </li>
             </ol>
             <p>
-              If some of your users have no <Code>mail</Code> value but their UPN is their real
-              email address, use <Code>user.userprincipalname</Code> instead. A sign-in with no
-              email address is refused.
+              A user with no <Code>mail</Code> value reaches OpenSCORM under the Name ID instead,
+              which by default is their user principal name (UPN). Make sure every user you assign
+              in step 4 has a <Code>mail</Code> value, or a UPN that is their real email address.
             </p>
-            <p>On the same page, check two more settings:</p>
+            <p>Also check two security settings:</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                <strong>SAML Certificates.</strong> Leave <strong>Signing Option</strong> at{" "}
+                <strong>Token signing certificate.</strong> Under <strong>Edit</strong> on the{" "}
+                <strong>SAML Certificates</strong> card, leave <strong>Signing Option</strong> at{" "}
                 <strong>Sign SAML assertion</strong> and <strong>Signing Algorithm</strong> at{" "}
                 <strong>SHA-256</strong>, which are the defaults. OpenSCORM requires a signed
                 assertion.
@@ -381,8 +380,8 @@ export function SsoEntraDocPage() {
                 ],
                 [
                   'OpenSCORM: "Sign-in is missing an email address"',
-                  "The Name ID or email claim is empty for this user",
-                  "Set the Name ID source as in step 3, and make sure the user has a mail value",
+                  "The emailaddress claim and the Name ID are both empty for this user",
+                  "Check the emailaddress claim as in step 3, and make sure the user has a mail value",
                 ],
                 [
                   'OpenSCORM: "No account for this sign-in"',
