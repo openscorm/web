@@ -6,8 +6,8 @@
 // rollup over stored cmi_result rows, and Slate.Content.ScormCompletion in C#,
 // for the dispatch save. Three runtimes, one rule, and a rule written three
 // times will disagree with itself eventually, so all three are asserted
-// against tests/fixtures/scorm-completion-cases.json rather than against each
-// other.
+// against web/src/test/fixtures/scorm-completion-cases.json rather than
+// against each other.
 //
 // This copy exists because the dispatch launcher runs inside the customer's
 // client's LMS, was handed a SCORM 1.2 API by that LMS, and can only write

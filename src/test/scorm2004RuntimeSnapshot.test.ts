@@ -16,11 +16,11 @@ import { createScorm2004Api, type DataModel } from "@/lib/scormDataModel2004";
 // and Slate.Progress.Tests drives the same file through the real ProgressWriter.
 // A change to the runtime's snapshot fails here and must be regenerated
 // deliberately rather than discovered in production.
-import expected from "../../../tests/fixtures/scorm2004-runtime-snapshot.json";
+import expected from "./fixtures/scorm2004-runtime-snapshot.json";
 
 /**
  * A finished, passed attempt that resumed a sitting with two hours banked.
- * Kept in step with tests/fixtures/scorm2004-runtime-snapshot.json.
+ * Kept in step with web/src/test/fixtures/scorm2004-runtime-snapshot.json.
  */
 function playAFinishedAttempt(): DataModel {
   let final: DataModel = {};

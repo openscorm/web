@@ -3,3 +3,7 @@ node_modules
 coverage
 build
 *.min.*
+
+# Shared with the .NET tests, which read the same files. Their layout is the
+# hand-kept case table and the runtime's own snapshot output, not web style.
+src/test/fixtures

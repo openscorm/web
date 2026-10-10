@@ -1,0 +1,439 @@
+{
+  "$comment": [
+    "Canonical cases for projecting SCORM 2004's two status axes onto the single",
+    "SCORM 1.2 lesson_status the platform stores, reports, bills and relays.",
+    "",
+    "The rule has to run in three places: SQL, for the hosted player's rollup over",
+    "progress.cmi_result; C#, for the dispatch save which projects from the incoming",
+    "payload; and TypeScript, for the shim relaying a result to a host LMS. A rule",
+    "written three times will disagree with itself eventually, so all three read",
+    "this file and are asserted against it rather than against each other.",
+    "",
+    "THE RULE. Completion says whether the learner finished. Success says how.",
+    "  - A failure is terminal and overrides everything. Never report a learner as",
+    "    complete when the course said they failed.",
+    "  - A pass does NOT override an explicit incomplete. A learner who passed the",
+    "    quiz but has not finished the course has not finished the course, and this",
+    "    platform's completions drive certificates and billing.",
+    "  - Otherwise completion decides, and an unknown completion reads as",
+    "    incomplete rather than not attempted, because 2004 courses commonly leave",
+    "    completion_status unknown for the whole of an attempt that is plainly",
+    "    underway.",
+    "",
+    "1.2 has 'browsed' and 2004 has no equivalent (cmi.mode = browse is a different",
+    "statement), so no 2004 input ever projects to it.",
+    "",
+    "THE ROLLUP RULE. A course is made of launchable activities. Nothing",
+    "implements this yet: the cases are written first, deliberately, so the SQL and",
+    "C# copies have something to disagree with before either one exists.",
+    "  - A single-activity course projects its one activity unchanged. 519 of 528",
+    "    live courses are that shape, so the guarantee is structural rather than",
+    "    checked case by case. The lone exception is a single asset, which records",
+    "    nothing today and completes on delivery under this rule.",
+    "  - An asset is terminal once delivered. It has no API to report through, so",
+    "    being served to the learner is the only signal that exists.",
+    "  - A SCO is terminal at passed, failed or completed. Incomplete, browsed, not",
+    "    attempted and silence are not.",
+    "  - While any activity is not terminal the course is incomplete, so one failed",
+    "    SCO does not end a course the learner could still finish. Once every",
+    "    activity is terminal a failure decides, then a pass, then completed.",
+    "  - Nothing reported anywhere stays nothing reported. Every activity explicitly",
+    "    not attempted reads as not attempted.",
+    "",
+    "Activity counts below are representative and the rule does not depend on them.",
+    "Browsed being non-terminal in a rollup is the one call here not forced by",
+    "THE RULE above, and is the first thing to revisit if a 1.2 package argues",
+    "with it."
+  ],
+  "status": [
+    {
+      "why": "the ordinary graded completion",
+      "completion": "completed",
+      "success": "passed",
+      "lesson12": null,
+      "expect": "passed"
+    },
+    {
+      "why": "a failure is terminal even when the course is finished",
+      "completion": "completed",
+      "success": "failed",
+      "lesson12": null,
+      "expect": "failed"
+    },
+    {
+      "why": "finished, ungraded",
+      "completion": "completed",
+      "success": "unknown",
+      "lesson12": null,
+      "expect": "completed"
+    },
+    {
+      "why": "finished, success never written",
+      "completion": "completed",
+      "success": "",
+      "lesson12": null,
+      "expect": "completed"
+    },
+    {
+      "why": "passed the quiz, has not finished the course",
+      "completion": "incomplete",
+      "success": "passed",
+      "lesson12": null,
+      "expect": "incomplete"
+    },
+    {
+      "why": "a failure is terminal even mid-course",
+      "completion": "incomplete",
+      "success": "failed",
+      "lesson12": null,
+      "expect": "failed"
+    },
+    {
+      "why": "underway",
+      "completion": "incomplete",
+      "success": "unknown",
+      "lesson12": null,
+      "expect": "incomplete"
+    },
+    {
+      "why": "explicitly not started",
+      "completion": "not attempted",
+      "success": "unknown",
+      "lesson12": null,
+      "expect": "not attempted"
+    },
+    {
+      "why": "contradictory, but an explicit pass is the more specific claim",
+      "completion": "not attempted",
+      "success": "passed",
+      "lesson12": null,
+      "expect": "passed"
+    },
+    {
+      "why": "success-only course, which is common",
+      "completion": "unknown",
+      "success": "passed",
+      "lesson12": null,
+      "expect": "passed"
+    },
+    {
+      "why": "success-only course that failed",
+      "completion": "unknown",
+      "success": "failed",
+      "lesson12": null,
+      "expect": "failed"
+    },
+    {
+      "why": "attempt underway and the course has said nothing",
+      "completion": "unknown",
+      "success": "unknown",
+      "lesson12": null,
+      "expect": "incomplete"
+    },
+    {
+      "why": "completion absent, success passed",
+      "completion": "",
+      "success": "passed",
+      "lesson12": null,
+      "expect": "passed"
+    },
+    {
+      "why": "case is not significant",
+      "completion": "COMPLETED",
+      "success": "Passed",
+      "lesson12": null,
+      "expect": "passed"
+    },
+    {
+      "why": "1.2 passes straight through",
+      "completion": null,
+      "success": null,
+      "lesson12": "passed",
+      "expect": "passed"
+    },
+    {
+      "why": "1.2 passes straight through",
+      "completion": null,
+      "success": null,
+      "lesson12": "completed",
+      "expect": "completed"
+    },
+    {
+      "why": "1.2 passes straight through",
+      "completion": null,
+      "success": null,
+      "lesson12": "failed",
+      "expect": "failed"
+    },
+    {
+      "why": "1.2 passes straight through",
+      "completion": null,
+      "success": null,
+      "lesson12": "incomplete",
+      "expect": "incomplete"
+    },
+    {
+      "why": "1.2 browsed has no 2004 source but must survive",
+      "completion": null,
+      "success": null,
+      "lesson12": "browsed",
+      "expect": "browsed"
+    },
+    {
+      "why": "1.2 passes straight through",
+      "completion": null,
+      "success": null,
+      "lesson12": "not attempted",
+      "expect": "not attempted"
+    },
+    {
+      "why": "nothing at all reported",
+      "completion": null,
+      "success": null,
+      "lesson12": null,
+      "expect": null
+    },
+    {
+      "why": "empty is the same as absent",
+      "completion": "",
+      "success": "",
+      "lesson12": "",
+      "expect": null
+    },
+    {
+      "why": "a stale 1.2 default must not mask a live 2004 status",
+      "completion": "completed",
+      "success": "unknown",
+      "lesson12": "not attempted",
+      "expect": "completed"
+    }
+  ],
+  "rollup": [
+    {
+      "why": "one SCO, the shape 519 of 528 live courses have, must read exactly as it does today",
+      "activities": [
+        { "kind": "sco", "status": "passed" }
+      ],
+      "expect": "passed"
+    },
+    {
+      "why": "a single-SCO failure follows THE RULE unchanged",
+      "activities": [
+        { "kind": "sco", "status": "failed" }
+      ],
+      "expect": "failed"
+    },
+    {
+      "why": "browsed survives only because a single activity projects unchanged",
+      "activities": [
+        { "kind": "sco", "status": "browsed" }
+      ],
+      "expect": "browsed"
+    },
+    {
+      "why": "one SCO that reported nothing stays nothing",
+      "activities": [
+        { "kind": "sco", "status": null }
+      ],
+      "expect": null
+    },
+    {
+      "why": "a lone asset completes on delivery, which is a deliberate change: today it records nothing",
+      "activities": [
+        { "kind": "asset", "delivered": true }
+      ],
+      "expect": "completed"
+    },
+    {
+      "why": "a lone asset never reached has still reported nothing",
+      "activities": [
+        { "kind": "asset", "delivered": false }
+      ],
+      "expect": null
+    },
+    {
+      "why": "every activity terminal and graded",
+      "activities": [
+        { "kind": "sco", "status": "passed" },
+        { "kind": "sco", "status": "passed" }
+      ],
+      "expect": "passed"
+    },
+    {
+      "why": "the multi-SCO bug in full: today this reports passed on the strength of SCO 1 alone",
+      "activities": [
+        { "kind": "sco", "status": "passed" },
+        { "kind": "sco", "status": "not attempted" }
+      ],
+      "expect": "incomplete"
+    },
+    {
+      "why": "a second SCO underway holds the course open",
+      "activities": [
+        { "kind": "sco", "status": "passed" },
+        { "kind": "sco", "status": "incomplete" }
+      ],
+      "expect": "incomplete"
+    },
+    {
+      "why": "a failure does not end a course the learner could still finish",
+      "activities": [
+        { "kind": "sco", "status": "failed" },
+        { "kind": "sco", "status": "incomplete" }
+      ],
+      "expect": "incomplete"
+    },
+    {
+      "why": "every activity terminal, so the failure decides",
+      "activities": [
+        { "kind": "sco", "status": "failed" },
+        { "kind": "sco", "status": "passed" }
+      ],
+      "expect": "failed"
+    },
+    {
+      "why": "finished, nothing graded",
+      "activities": [
+        { "kind": "sco", "status": "completed" },
+        { "kind": "sco", "status": "completed" }
+      ],
+      "expect": "completed"
+    },
+    {
+      "why": "any grade makes the course graded",
+      "activities": [
+        { "kind": "sco", "status": "completed" },
+        { "kind": "sco", "status": "passed" }
+      ],
+      "expect": "passed"
+    },
+    {
+      "why": "explicitly not started",
+      "activities": [
+        { "kind": "sco", "status": "not attempted" },
+        { "kind": "sco", "status": "not attempted" }
+      ],
+      "expect": "not attempted"
+    },
+    {
+      "why": "launched and silent is not the same as explicitly not started",
+      "activities": [
+        { "kind": "sco", "status": null },
+        { "kind": "sco", "status": null }
+      ],
+      "expect": null
+    },
+    {
+      "why": "browsed is not terminal once there is more than one activity",
+      "activities": [
+        { "kind": "sco", "status": "passed" },
+        { "kind": "sco", "status": "browsed" }
+      ],
+      "expect": "incomplete"
+    },
+    {
+      "why": "ADL ContentPackagingOneFilePerSCO: all assets, zero SCOs, which can never complete today",
+      "activities": [
+        { "kind": "asset", "delivered": true },
+        { "kind": "asset", "delivered": true },
+        { "kind": "asset", "delivered": true }
+      ],
+      "expect": "completed"
+    },
+    {
+      "why": "one page of the asset package never reached",
+      "activities": [
+        { "kind": "asset", "delivered": true },
+        { "kind": "asset", "delivered": true },
+        { "kind": "asset", "delivered": false }
+      ],
+      "expect": "incomplete"
+    },
+    {
+      "why": "mixed package, everything reached",
+      "activities": [
+        { "kind": "sco", "status": "passed" },
+        { "kind": "asset", "delivered": true }
+      ],
+      "expect": "passed"
+    },
+    {
+      "why": "mixed package: the asset has to be reached too",
+      "activities": [
+        { "kind": "sco", "status": "passed" },
+        { "kind": "asset", "delivered": false }
+      ],
+      "expect": "incomplete"
+    },
+    {
+      "why": "mixed package, the SCO still underway",
+      "activities": [
+        { "kind": "sco", "status": "incomplete" },
+        { "kind": "asset", "delivered": true }
+      ],
+      "expect": "incomplete"
+    }
+  ],
+  "duration": [
+    {
+      "why": "1.2 format already canonical",
+      "raw": "0000:12:34",
+      "expect": "0000:12:34"
+    },
+    {
+      "why": "short hours are padded to four digits",
+      "raw": "00:12:34",
+      "expect": "0000:12:34"
+    },
+    {
+      "why": "a hundredths tail is dropped, not kept",
+      "raw": "0001:02:03.50",
+      "expect": "0001:02:03"
+    },
+    {
+      "why": "the ordinary 2004 duration",
+      "raw": "PT1H30M15S",
+      "expect": "0001:30:15"
+    },
+    {
+      "why": "zero",
+      "raw": "PT0H0M0S",
+      "expect": "0000:00:00"
+    },
+    {
+      "why": "hours are not wrapped at 24",
+      "raw": "PT36H",
+      "expect": "0036:00:00"
+    },
+    {
+      "why": "days are folded into hours",
+      "raw": "P1DT2H",
+      "expect": "0026:00:00"
+    },
+    {
+      "why": "minutes only",
+      "raw": "PT90M",
+      "expect": "0001:30:00"
+    },
+    {
+      "why": "fractional seconds truncate to whole seconds",
+      "raw": "PT15.75S",
+      "expect": "0000:00:15"
+    },
+    {
+      "why": "nothing reported",
+      "raw": null,
+      "expect": null
+    },
+    {
+      "why": "empty is the same as absent",
+      "raw": "",
+      "expect": null
+    },
+    {
+      "why": "an unparseable value is kept rather than discarded",
+      "raw": "about an hour",
+      "expect": "about an hour"
+    }
+  ]
+}

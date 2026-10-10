@@ -12,7 +12,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Imported as text rather than executed on import: the file is an IIFE that
 // expects a document to already exist. This is the same path the .NET build
 // embeds, so the two cannot drift.
-import launcherSource from "../../../src/Slate.Dispatch/Templates/launcher.js?raw";
+//
+// The launcher lives with the .NET project, outside web/, and the public web/
+// mirror receives web/ alone, so there this suite has nothing to test and is
+// skipped rather than failed. The skip keys on the solution file as well, so
+// in this repo a launcher that moves fails the suite instead of quietly
+// skipping it.
+const launcherFiles = import.meta.glob<string>(
+  "../../../src/Slate.Dispatch/Templates/launcher.js",
+  { query: "?raw", import: "default", eager: true },
+);
+const launcherSource = Object.values(launcherFiles)[0] ?? "";
+const inFullRepo =
+  Object.keys(import.meta.glob("../../../platform.sln", { query: "?raw" })).length > 0;
 
 const LAUNCH_URL =
   "https://live.openscorm.com/dispatch/launch/6f9619ff-8b86-d011-b42d-00cf4fc964ff";
@@ -89,7 +101,7 @@ function sendFromShim(type: string, values: Record<string, string>, origin = LAU
   );
 }
 
-describe("dispatch launcher", () => {
+describe.skipIf(!inFullRepo)("dispatch launcher", () => {
   beforeEach(() => {
     Object.defineProperty(window, "opener", { value: null, writable: true, configurable: true });
     document.head.innerHTML = "";

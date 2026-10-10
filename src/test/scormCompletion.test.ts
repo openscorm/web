@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { projectStatus, toLegacyDuration, toLegacyRelayModel } from "@/lib/scormCompletion";
 
 // The one case table, imported rather than read from disk so this needs no
-// @types/node, and imported from tests/fixtures rather than copied into web/
-// so it stays one table.
-import caseTable from "../../../tests/fixtures/scorm-completion-cases.json";
+// @types/node. It lives in web/ rather than tests/ so the public web/ mirror
+// carries it too; the .NET tests read the same file, so it stays one table.
+import caseTable from "./fixtures/scorm-completion-cases.json";
 
 // The TypeScript third of one rule. The other two are
 // progress.scorm_lesson_status in SQL (migration 051) and
