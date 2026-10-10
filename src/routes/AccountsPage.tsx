@@ -4,27 +4,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api";
 import type { ProblemResponse, PublicConfig } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { TablePager } from "@/components/TablePager";
 import { TableStateRow } from "@/components/TableStateRow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -154,6 +146,7 @@ export function AccountsPage() {
   return (
     <AppShell align="left">
       <PageHeader
+        className="mb-6"
         title="Accounts"
         subtitle="Manage learners and managers for your tenant."
         restricted={[
@@ -282,7 +275,7 @@ export function AccountsPage() {
                       aria-label={`Actions for ${u.name}`}
                       className="hover:bg-muted text-muted-foreground hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-lg"
                     >
-                      <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                      <i className="fa-sharp fa-regular fa-ellipsis" aria-hidden="true" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>

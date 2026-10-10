@@ -2,14 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ChevronDown, Download } from "lucide-react";
-
 import { api, ApiError, download } from "@/lib/api";
 import { formatDateTime } from "@/lib/dates";
 import type { ProblemResponse } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { InvitationLinksSection } from "@/components/InvitationLinksSection";
 
@@ -221,6 +219,7 @@ export function CourseDetailPage() {
         · Detail
       </div>
       <PageHeader
+        className="mb-6"
         title={c.title || c.courseSlug}
         restricted={[
           "Manager or operator access only. Learners are redirected to the library.",
@@ -288,7 +287,10 @@ export function CourseDetailPage() {
                 onClick={onDownload}
                 className={secondaryBtn}
               >
-                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                <i
+                  className="fa-sharp fa-regular fa-download fa-width-auto mr-2"
+                  aria-hidden="true"
+                />
                 {downloading ? "Preparing…" : "Download package"}
               </button>
               <p className="text-muted-foreground mt-1.5 text-xs">
@@ -455,8 +457,8 @@ export function CourseDetailPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown
-                  className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2"
+                <i
+                  className="fa-sharp fa-regular fa-chevron-down text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs"
                   aria-hidden="true"
                 />
               </div>

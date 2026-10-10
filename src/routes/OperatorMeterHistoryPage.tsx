@@ -4,18 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/dates";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { TableStateRow } from "@/components/TableStateRow";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 
 // One tenant's active-learner count per billing period for the last twelve
 // months, with the plan and cap each period was on. An operator reads it
@@ -65,6 +58,7 @@ export function OperatorMeterHistoryPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title={h ? `Operator: Meter history for ${h.tenantName}` : "Operator: Meter history"}
         subtitle="Learners who launched a course in each billing period, against the plan and cap that period was on"
         restricted={[

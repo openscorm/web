@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, apiBase } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface CourseRow {
   courseKey: number;
@@ -28,7 +28,7 @@ export function MyCoursesPage() {
 
   return (
     <AppShell>
-      <PageHeader title="My courses" subtitle="Courses available to you" />
+      <PageHeader className="mb-6" title="My courses" subtitle="Courses available to you" />
 
       {list.isLoading && <p className="text-muted-foreground text-sm">Loading courses…</p>}
       {list.data?.length === 0 && (

@@ -7,14 +7,7 @@ import type { ProblemResponse } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 
 // The roster's CSV import. Choose a file, see what happens to every row, then
 // confirm. Nothing is written until the confirm, and the server re-reads the
@@ -53,16 +46,18 @@ const STATUS_LABEL: Record<ImportRow["status"], string> = {
   over_capacity: "Not created",
 };
 
-const STATUS_VARIANT: Record<ImportRow["status"], "success" | "danger" | "warning" | "secondary"> =
-  {
-    ready: "success",
-    created: "success",
-    invalid: "danger",
-    over_capacity: "danger",
-    duplicate: "warning",
-    existing: "secondary",
-    deactivated: "secondary",
-  };
+const STATUS_VARIANT: Record<
+  ImportRow["status"],
+  "success" | "destructive" | "warning" | "secondary"
+> = {
+  ready: "success",
+  created: "success",
+  invalid: "destructive",
+  over_capacity: "destructive",
+  duplicate: "warning",
+  existing: "secondary",
+  deactivated: "secondary",
+};
 
 function plural(n: number, one: string, many: string) {
   return `${n.toLocaleString()} ${n === 1 ? one : many}`;

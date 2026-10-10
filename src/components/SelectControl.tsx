@@ -1,5 +1,4 @@
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 
@@ -37,8 +36,8 @@ export function SelectControl({
       >
         {children}
       </select>
-      <ChevronDown
-        className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2"
+      <i
+        className="fa-sharp fa-regular fa-chevron-down text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs"
         aria-hidden="true"
       />
     </div>

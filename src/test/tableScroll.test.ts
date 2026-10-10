@@ -46,13 +46,13 @@ describe("data grids scroll instead of clipping", () => {
   //
   // Since the design-system migration a data grid is reached one of two ways: a
   // raw <table> wrapped in overflow-x-auto (guarded above), or the
-  // ui/table.tsx <Table> primitive, which wraps itself in overflow-x-auto. The
-  // sentinel counts both, so converting a page from a raw <table> to <Table>
-  // does not silently make the scan above vacuous.
+  // components/Table.tsx <Table> primitive, which wraps itself in
+  // overflow-x-auto. The sentinel counts both, so converting a page from a raw
+  // <table> to <Table> does not silently make the scan above vacuous.
   it("actually reaches the pages it is guarding", () => {
     const scanned = Object.keys(sources).filter((p) => !p.startsWith("../test/"));
     const withGrids = scanned.filter(
-      (p) => /<table\b/.test(sources[p]) || sources[p].includes('from "@/components/ui/table"'),
+      (p) => /<table\b/.test(sources[p]) || sources[p].includes('from "@/components/Table"'),
     );
 
     // 36 components; well over a dozen reach a grid one way or the other. The

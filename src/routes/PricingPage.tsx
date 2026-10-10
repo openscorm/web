@@ -7,7 +7,7 @@ import type { ProblemResponse } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useImpression } from "@/hooks/useImpression";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatDate } from "@/lib/dates";
 import {
   Dialog,
@@ -196,6 +196,7 @@ export function PricingPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Pricing"
         subtitle={
           <>

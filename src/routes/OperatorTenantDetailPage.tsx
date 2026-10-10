@@ -7,7 +7,7 @@ import { ACCOUNT_PAGE_SIZE, roleLabel } from "@/lib/accounts";
 import type { AccountsResponse, AccountSort } from "@/lib/accounts";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { TablePager } from "@/components/TablePager";
 import { DetailCard, DetailGrid, Field } from "@/components/DetailCard";
 import { PageLoading } from "@/components/PageLoading";
@@ -18,14 +18,7 @@ import { OperatorTenantSamlCard } from "@/components/OperatorTenantSamlCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 import {
   Dialog,
   DialogContent,
@@ -297,6 +290,7 @@ export function OperatorTenantDetailPage() {
   return (
     <AppShell align="left">
       <PageHeader
+        className="mb-6"
         title={t ? `Tenant: ${t.tenantName}` : "Tenant"}
         subtitle="Cross-tenant tenant detail"
         restricted={[

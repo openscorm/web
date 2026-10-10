@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { MetricCard } from "@/components/MetricCard";
 import { api } from "@/lib/api";
 import { formatTime } from "@/lib/dates";
@@ -88,6 +88,7 @@ export function OperatorDashboardPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Operator: Dashboard"
         subtitle="Platform-wide stats and live activity"
         restricted={[

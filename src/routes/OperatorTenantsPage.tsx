@@ -5,21 +5,14 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/dates";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { TablePager } from "@/components/TablePager";
 import { SearchInput } from "@/components/SearchInput";
 import { SelectControl } from "@/components/SelectControl";
 import { TableStateRow } from "@/components/TableStateRow";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 
 interface OperatorTenantSummary {
   tenantKey: number;
@@ -117,6 +110,7 @@ export function OperatorTenantsPage() {
   return (
     <AppShell align="left">
       <PageHeader
+        className="mb-6"
         title="Operator: Tenants"
         subtitle="Cross-tenant view"
         restricted={[

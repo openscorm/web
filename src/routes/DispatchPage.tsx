@@ -8,7 +8,7 @@ import type { ProblemResponse } from "@/lib/types";
 import type { ClientRow } from "@/lib/dispatch";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -63,6 +63,7 @@ export function DispatchPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Dispatch"
         subtitle="Deliver your hosted courses inside your clients' own LMSs"
         actions={

@@ -8,7 +8,7 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import type { ProblemResponse } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DetailCard, DetailGrid, Field } from "@/components/DetailCard";
 import { PageLoading } from "@/components/PageLoading";
@@ -16,14 +16,7 @@ import { TableStateRow } from "@/components/TableStateRow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 import { IDENTITY_NOT_RECORDED, type RecordRow } from "@/lib/records";
 
 interface LearnerDetail {
@@ -94,7 +87,11 @@ export function LearnerDetailPage() {
   if (detail.isError || !detail.data) {
     return (
       <AppShell align="left">
-        <PageHeader title="Learner not found" subtitle="No such learner in your tenant" />
+        <PageHeader
+          className="mb-6"
+          title="Learner not found"
+          subtitle="No such learner in your tenant"
+        />
         <Link to="/reports" className="text-link text-sm hover:underline">
           Back to reports
         </Link>
@@ -115,7 +112,7 @@ export function LearnerDetailPage() {
 
   return (
     <AppShell align="left">
-      <PageHeader title={learner.name} subtitle={learner.email} />
+      <PageHeader className="mb-6" title={learner.name} subtitle={learner.email} />
 
       <div className="mb-6">
         <Link to="/reports" className="text-muted-foreground text-sm hover:underline">

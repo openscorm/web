@@ -8,7 +8,7 @@ import type { ProblemResponse } from "@/lib/types";
 import type { ClientRow, DispatchDetail, DispatchRow } from "@/lib/dispatch";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -96,6 +96,7 @@ export function DispatchClientPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title={client?.clientName ?? "Client organization"}
         subtitle="Dispatches delivered to this client"
         actions={

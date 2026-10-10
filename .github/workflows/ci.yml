@@ -23,6 +23,10 @@ jobs:
 
       - name: Install
         run: npm ci
+        env:
+          # Font Awesome Pro registry auth (see web/.npmrc). Without it npm ci
+          # answers E401 before any check runs.
+          FONTAWESOME_NPM_AUTH_TOKEN: ${{ secrets.FONTAWESOME_NPM_AUTH_TOKEN }}
 
       - name: Format check
         run: npm run format:check

@@ -11,7 +11,7 @@ import type { ProblemResponse } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useImpression } from "@/hooks/useImpression";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 
@@ -231,6 +231,7 @@ export function LibraryPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Library"
         subtitle="SCORM and xAPI packages available to your tenant"
         restricted={[

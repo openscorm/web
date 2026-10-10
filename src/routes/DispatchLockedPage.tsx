@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Lock } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
 import { api, ApiError } from "@/lib/api";
 import type { ProblemResponse } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Free-tier dispatch gate, the "show" surface. RequireDispatch renders this
 // instead of the console for a Free (Trial) manager; a paid tenant never lands
@@ -54,11 +53,15 @@ export function DispatchLockedPage() {
 
   return (
     <AppShell>
-      <PageHeader title="SCORM Dispatch" subtitle="Deliver your own courses into a client's LMS" />
+      <PageHeader
+        className="mb-6"
+        title="SCORM Dispatch"
+        subtitle="Deliver your own courses into a client's LMS"
+      />
 
       <div className="border-border bg-card mx-auto max-w-xl rounded-xl border p-8">
         <span className="inline-flex items-center gap-1.5 rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-950/50 dark:text-green-300">
-          <Lock className="h-3.5 w-3.5" />
+          <i className="fa-sharp fa-regular fa-lock" aria-hidden="true" />
           Available on any paid plan
         </span>
 

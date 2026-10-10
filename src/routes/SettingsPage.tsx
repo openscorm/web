@@ -6,7 +6,7 @@ import type { MfaSetupResponse, MfaStatusResponse, ProblemResponse } from "@/lib
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { MfaProvisioning } from "@/components/MfaProvisioning";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { TenantApiKeysCard } from "@/components/TenantApiKeysCard";
 import { TenantSecurityCard } from "@/components/TenantSecurityCard";
 import { LinkVerificationCard } from "@/components/LinkVerificationCard";
@@ -104,6 +104,7 @@ export function SettingsPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Settings"
         subtitle="Two-factor authentication, product analytics, and your organization's sign-in policy"
       />

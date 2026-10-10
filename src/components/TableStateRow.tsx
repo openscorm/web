@@ -1,5 +1,5 @@
 import * as React from "react";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/Table";
 import { cn } from "@/lib/cn";
 
 // The single full-width row a table shows instead of data: loading, empty, or

@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, NavLink, Navigate, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, CircleUser, Lock } from "lucide-react";
 
 import { EnvironmentBadge, EnvironmentRule } from "@/components/EnvironmentBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -110,7 +109,7 @@ export function AppShell({
                 {n.label}
                 {n.to === "/dispatch" && user.dispatchGated && (
                   <span className="ml-2 inline-flex items-center gap-1 rounded bg-green-100 px-1.5 py-0.5 align-middle text-[10px] font-medium text-green-800 dark:bg-green-950/50 dark:text-green-300">
-                    <Lock className="h-2.5 w-2.5" />
+                    <i className="fa-sharp fa-regular fa-lock" aria-hidden="true" />
                     Paid
                   </span>
                 )}
@@ -232,9 +231,9 @@ function UserMenu({ user, onSignOut }: { user: MeResponse; onSignOut: () => void
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm">
-        <CircleUser className="h-4 w-4" aria-hidden="true" />
+        <i className="fa-sharp fa-regular fa-circle-user" aria-hidden="true" />
         <span className="hidden max-w-40 truncate sm:inline">{displayName}</span>
-        <ChevronDown className="h-3 w-3 opacity-60" aria-hidden="true" />
+        <i className="fa-sharp fa-regular fa-chevron-down text-xs opacity-60" aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">

@@ -7,20 +7,13 @@ import { ACCOUNT_PAGE_SIZE, roleLabel } from "@/lib/accounts";
 import type { AccountsResponse } from "@/lib/accounts";
 import { formatDate } from "@/lib/dates";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { TablePager } from "@/components/TablePager";
 import { SearchInput } from "@/components/SearchInput";
 import { TableStateRow } from "@/components/TableStateRow";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 
 export function OperatorAccountsPage() {
   const [page, setPage] = useState(1);
@@ -51,6 +44,7 @@ export function OperatorAccountsPage() {
   return (
     <AppShell align="left">
       <PageHeader
+        className="mb-6"
         title="Operator: Accounts"
         subtitle="All accounts across all tenants"
         restricted={[

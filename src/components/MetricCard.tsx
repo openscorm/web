@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { CircleHelp } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,7 +31,7 @@ export function MetricCard({
                 aria-label={`What counts as ${label.toLowerCase()}`}
                 className="text-muted-foreground/60 hover:text-foreground focus-visible:ring-primary rounded-full focus-visible:ring-2 focus-visible:outline-none"
               >
-                <CircleHelp className="h-3.5 w-3.5 shrink-0" />
+                <i className="fa-sharp fa-regular fa-circle-question" aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent className="w-56 font-normal tracking-normal normal-case">
                 {hint}

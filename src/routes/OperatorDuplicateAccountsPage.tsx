@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/dates";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface OperatorAccountSummary {
   tenantHandle: string;
@@ -61,6 +61,7 @@ export function OperatorDuplicateAccountsPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Operator: Duplicate accounts"
         subtitle="Accounts sharing an email address with at least one other account"
         restricted={[

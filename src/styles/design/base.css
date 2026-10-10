@@ -1,0 +1,171 @@
+/*
+  Shared tokens for every app. The registry copies this file to src/styles/design/base.css and
+  installs tw-animate-css; the app imports it after Tailwind and before exactly one palette:
+
+    @import "tailwindcss";
+    @import "./design/base.css";
+    @import "./design/palettes/<app>.css";
+
+  The accent group below is a default indigo, so base.css alone still renders. A palette sets
+  --color-primary, --color-primary-foreground, and --color-link; the derived tokens recompute from
+  them through relative colour syntax, and a palette may still pin any of them exactly.
+*/
+
+/* Enter and exit animations for the floating surfaces (dialogs, menus, popovers, selects,
+   tooltips). Their animate-in / fade / zoom classes produce nothing without it. */
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* static: Tailwind otherwise drops any theme variable no utility class uses, so a token read
+   through var() - an inline style, custom CSS, a Claude Design layout - would resolve to nothing in
+   light mode while .dark, plain CSS, still defines it. Palettes use static for the same reason. */
+@theme static {
+  /* Most UI text is text-sm, so lifting it from Tailwind's 14px to 15px sets the reading size. */
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+
+  /* The font-mono utility must resolve to Geist Mono, the identifier face. Without this token
+     Tailwind falls back to a generic ui-monospace stack. */
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-card: 0.75rem;
+  --radius-badge: 0.375rem;
+
+  /* Warm near-neutral page: enough separation from the white cards to read, not enough to look
+     dirty. Hex kept exact rather than approximated in oklch. */
+  --color-background: #f7f5f0;
+  --color-foreground: oklch(0.32 0.03 258);
+  --color-foreground-strong: oklch(0.21 0.04 265);
+  --color-muted: oklch(0.97 0.005 255);
+  --color-muted-foreground: oklch(0.55 0.03 258);
+  --color-border: oklch(0.92 0.008 255);
+  --color-input-border: oklch(0.87 0.01 255);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.32 0.03 258);
+
+  --color-primary: oklch(0.47 0.22 273);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-link: oklch(0.47 0.22 273);
+
+  /* Derived from the palette's primary. */
+  --color-primary-hover: oklch(from var(--color-primary) calc(l - 0.06) c h);
+  --color-accent: oklch(from var(--color-primary) calc(l + 0.08) c h);
+  --color-accent-foreground: var(--color-primary-foreground);
+  --color-input-focus-ring: oklch(from var(--color-primary) l c h / 25%);
+  --color-selection-bg: oklch(from var(--color-primary) 0.93 calc(c * 0.25) h);
+
+  /* Secondary is neutral by default, so one accent per app stays the rule. A palette with a
+     genuine second brand colour (openscorm's blue) overrides it. */
+  --color-secondary: var(--color-foreground-strong);
+  --color-secondary-foreground: oklch(0.985 0 0);
+
+  --color-success: oklch(0.72 0.18 152);
+  --color-warning: oklch(0.79 0.16 78);
+  --color-danger: oklch(0.63 0.22 27);
+
+  /* Live's environment colour, hueless on purpose: production is the ordinary place to be, and
+     the ramp spends its colour saying "you are not in production". Inverts by theme because a
+     near-black swatch disappears against a dark card. */
+  --color-env-live: oklch(0.32 0.02 265);
+}
+
+.dark {
+  --color-background: oklch(0.17 0.02 265);
+  --color-foreground: oklch(0.9 0.01 258);
+  --color-foreground-strong: oklch(0.97 0.005 258);
+  --color-muted: oklch(0.24 0.02 265);
+  --color-muted-foreground: oklch(0.68 0.02 258);
+  --color-border: oklch(0.28 0.02 265);
+  --color-input-border: oklch(0.36 0.02 265);
+  --color-card: oklch(0.2 0.02 265);
+  --color-card-foreground: oklch(0.9 0.01 258);
+
+  --color-primary: oklch(0.62 0.2 273);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-link: oklch(0.72 0.16 269);
+
+  --color-input-focus-ring: oklch(from var(--color-primary) l c h / 35%);
+  --color-selection-bg: oklch(from var(--color-primary) 0.35 calc(c * 0.5) h);
+  --color-secondary-foreground: var(--color-background);
+
+  --color-success: oklch(0.75 0.17 152);
+  --color-warning: oklch(0.83 0.17 82);
+  --color-danger: oklch(0.68 0.22 27);
+
+  --color-env-live: oklch(0.75 0.015 265);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  /* --app-font-sans is set at runtime by apps with per-owner themes (bump, festival); absent one,
+     the Inter stack applies. */
+  font-family: var(
+    --app-font-sans,
+    "Inter Variable",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif
+  );
+  font-size: 16px;
+  font-feature-settings: "tnum", "cv11";
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background-color: var(--color-selection-bg);
+}
+
+/* Native checkboxes carry no per-instance class; theme them once so every checkbox matches the
+   palette in both themes. */
+input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* In @layer base so utility classes can override it - unlayered rules would beat Tailwind's
+   layered utilities in the cascade. */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--color-foreground-strong);
+  }
+}
+
+/* Anyone who has asked the OS for less motion gets none: surfaces appear and disappear at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

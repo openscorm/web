@@ -113,6 +113,23 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
 
+Font Awesome Pro (@fortawesome/fontawesome-pro 7.3.1)
+-----------------------------------------------------
+
+Two Font Awesome Pro webfonts (fa-sharp-regular-400-*.woff2 and
+fa-sharp-solid-900-*.woff2) and the stylesheets that map icon names to them
+are emitted into the build and served with the application. Font Awesome
+Pro is commercial software used under a paid license. It is not covered by
+the AGPL, and its license does not require attribution; this entry records
+it so the bundle's contents are complete. The license terms are at:
+https://fontawesome.com/license
+
+The published source does not include Font Awesome Pro. npm installs it from
+the Font Awesome registry, which needs a Font Awesome Pro token in the
+FONTAWESOME_NPM_AUTH_TOKEN environment variable (see .npmrc), so building
+the client from source requires a Font Awesome Pro license of your own.
+
+
 DOMPurify (dompurify 3.4.14)
 ----------------------------
 

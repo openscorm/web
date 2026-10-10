@@ -1,7 +1,3 @@
-import { useState } from "react";
-import { Lock } from "lucide-react";
-
-import { cn } from "@/lib/cn";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/cn";
+import { useState } from "react";
 
 interface PageHeaderProps {
   title: React.ReactNode;
@@ -20,22 +18,21 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, actions, restricted, className }: PageHeaderProps) {
   const [rulesOpen, setRulesOpen] = useState(false);
-  const hasRules = restricted !== undefined && restricted.length > 0;
 
   return (
-    <div className={cn("mb-6 flex items-start justify-between gap-4", className)}>
+    <div className={cn("flex items-start justify-between gap-4", className)}>
       <div className="min-w-0">
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <span>{title}</span>
-          {hasRules && (
+          {restricted && restricted.length > 0 && (
             <button
               type="button"
               onClick={() => setRulesOpen(true)}
               title="View access rules"
               aria-label="View access rules"
-              className="text-muted-foreground/70 hover:text-foreground focus-visible:ring-primary rounded p-0.5 focus-visible:ring-2 focus-visible:outline-none"
+              className="text-muted-foreground/70 hover:text-foreground focus-visible:ring-primary flex rounded p-0.5 focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Lock className="h-4 w-4" />
+              <i className="fa-sharp fa-regular fa-lock text-base" aria-hidden="true" />
             </button>
           )}
         </h1>
@@ -43,7 +40,7 @@ export function PageHeader({ title, subtitle, actions, restricted, className }: 
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
 
-      {hasRules && (
+      {restricted && restricted.length > 0 && (
         <Dialog open={rulesOpen} onOpenChange={setRulesOpen}>
           <DialogContent>
             <DialogHeader>

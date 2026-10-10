@@ -8,7 +8,7 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import type { ProblemResponse } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { TablePager } from "@/components/TablePager";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { RecordRow } from "@/lib/records";
@@ -130,6 +130,7 @@ export function ReportsPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Reports"
         subtitle="Search learner records and download them as CSV"
         restricted={[

@@ -5,18 +5,11 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { TableStateRow } from "@/components/TableStateRow";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 
 // The active-learner meter across tenants, for operators only,
 // before any customer sees it: the proof the launch ledger is filling, and the
@@ -63,7 +56,7 @@ interface OperatorMeterReportResponse {
 }
 
 const stateBadge: Record<MeterState, { label: string; variant: BadgeProps["variant"] }> = {
-  sustained: { label: "Sustained", variant: "danger" },
+  sustained: { label: "Sustained", variant: "destructive" },
   over: { label: "Over", variant: "warning" },
   near: { label: "Near", variant: "secondary" },
   under: { label: "Under", variant: "outline" },
@@ -90,6 +83,7 @@ export function OperatorMeterReportPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Operator: Active-learner meter"
         subtitle="Learners who launched a course this billing period and last, against each tenant's cap"
         restricted={[

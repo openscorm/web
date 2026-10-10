@@ -7,7 +7,7 @@ import { roleLabel } from "@/lib/accounts";
 import { formatDateTime } from "@/lib/dates";
 import { AccountAdminActions } from "@/components/AccountAdminActions";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DetailCard, DetailGrid, Field } from "@/components/DetailCard";
 import { PageLoading } from "@/components/PageLoading";
@@ -16,14 +16,7 @@ import { TableStateRow } from "@/components/TableStateRow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 import {
   Dialog,
   DialogContent,
@@ -144,6 +137,7 @@ export function OperatorAccountDetailPage() {
   return (
     <AppShell align="left">
       <PageHeader
+        className="mb-6"
         title={a ? `Account: ${a.name}` : "Account"}
         subtitle="Cross-tenant account detail"
         restricted={[

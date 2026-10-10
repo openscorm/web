@@ -3,6 +3,12 @@ import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
 import "@fontsource-variable/inter";
+// Font Awesome Pro: core plus only the styles in use. Sharp Regular is the
+// app default; Sharp Solid is reserved for tiny filled glyphs (check marks
+// and radio dots in the menus).
+import "@fortawesome/fontawesome-pro/css/fontawesome.min.css";
+import "@fortawesome/fontawesome-pro/css/sharp-regular.min.css";
+import "@fortawesome/fontawesome-pro/css/sharp-solid.min.css";
 import { router } from "./router";
 import { queryClient } from "./lib/queryClient";
 import { api } from "./lib/api";

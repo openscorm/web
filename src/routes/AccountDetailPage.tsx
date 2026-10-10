@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AccountAdminActions } from "@/components/AccountAdminActions";
 import { AccountManagerActions } from "@/components/AccountManagerActions";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { DetailCard, DetailGrid, Field } from "@/components/DetailCard";
 import { PageLoading } from "@/components/PageLoading";
 import { PageError } from "@/components/PageError";
@@ -52,7 +52,7 @@ export function AccountDetailPage() {
 
   return (
     <AppShell align="left">
-      <PageHeader title={account?.name ?? "Account"} subtitle={account?.email} />
+      <PageHeader className="mb-6" title={account?.name ?? "Account"} subtitle={account?.email} />
 
       <div className="mb-4 flex items-center justify-between">
         <Link to="/accounts" className="text-link text-sm hover:underline">

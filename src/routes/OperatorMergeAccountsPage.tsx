@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/dates";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface OperatorAccountDetailResponse {
   tenantHandle: string;
@@ -75,6 +75,7 @@ export function OperatorMergeAccountsPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Operator: Merge accounts"
         subtitle="Merge two duplicate accounts into one"
         restricted={[

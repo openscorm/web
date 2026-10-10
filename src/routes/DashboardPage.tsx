@@ -9,7 +9,7 @@ import { tierLabel } from "@/lib/tiers";
 import { useAuth } from "@/hooks/useAuth";
 import { useImpression } from "@/hooks/useImpression";
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/page-header";
 import { MetricCard } from "@/components/MetricCard";
 
 interface CapacityResponse {
@@ -76,6 +76,7 @@ export function DashboardPage() {
   return (
     <AppShell>
       <PageHeader
+        className="mb-6"
         title="Dashboard"
         subtitle={
           dashboard.data

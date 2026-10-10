@@ -1,7 +1,6 @@
 import { LobbyLayout } from "@/components/LobbyLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink } from "lucide-react";
 
 import { usePageTitle } from "@/hooks/usePageTitle";
 import {
@@ -89,7 +88,7 @@ export function TrustPage() {
                                     compliance report" rather than the
                                     certificate list read as a sentence. The
                                     negative margin trades no visual space for
-                                    a hit area bigger than a 14px glyph. */}
+                                    a hit area bigger than a 12px glyph. */}
                                 <a
                                   href={link.href}
                                   target="_blank"
@@ -97,7 +96,10 @@ export function TrustPage() {
                                   aria-label={`Open the ${link.label.split(":")[0].trim()} compliance report`}
                                   className="hover:text-foreground -m-1 shrink-0 p-1"
                                 >
-                                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                                  <i
+                                    className="fa-sharp fa-regular fa-arrow-up-right-from-square text-xs"
+                                    aria-hidden="true"
+                                  />
                                 </a>
                                 <span>{link.label}</span>
                               </li>

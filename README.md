@@ -18,13 +18,15 @@ a full LMS. Upload SCORM 1.2 or xAPI packages, deliver them through any LMS
 
 - React 18 + TypeScript, built with Vite
 - Tailwind CSS v4 with shadcn-style components
+- Font Awesome Pro icons (sharp)
 - TanStack Query for server state
 - React Router, React Hook Form + Zod
 - Vitest + Testing Library
 
 ## Development
 
-Requires Node 24 (see `.nvmrc`).
+Requires Node 24 (see `.nvmrc`). The icons are Font Awesome Pro, so `npm ci` needs a Font Awesome
+Pro package token in the `FONTAWESOME_NPM_AUTH_TOKEN` environment variable (see `.npmrc`).
 
 ```sh
 npm ci

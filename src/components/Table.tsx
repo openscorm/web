@@ -1,6 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/cn";
 
+// Openscorm's own table rather than the registry's. The registry table drops the left padding on
+// its cells, which would push the first column against the card edge in every table that sits in
+// a Card, so this one stays app-side until the registry table can keep it.
+
 export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
     <div className="w-full overflow-x-auto">
