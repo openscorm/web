@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
 import { DispatchLockedPage } from "@/routes/DispatchLockedPage";
+import { loginPathFor } from "@/lib/returnPath";
 
 // Route guard for the dispatch console. Composes with
 // RequireManager rather than replacing it: RequireManager answers "may this
@@ -19,6 +20,7 @@ import { DispatchLockedPage } from "@/routes/DispatchLockedPage";
 //                                API returns 404 on the same condition.
 export function RequireDispatch({ children }: { children: ReactNode }) {
   const { user, loading, fetching } = useAuth();
+  const location = useLocation();
 
   // Same hold-on-fetching reasoning as RequireManager: a cached null from an
   // earlier signed-out visit would otherwise bounce a legitimate visit.
@@ -29,7 +31,7 @@ export function RequireDispatch({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={loginPathFor(location)} replace />;
   if (user.dispatchGated) return <DispatchLockedPage />;
   if (!user.dispatchEnabled) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;

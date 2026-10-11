@@ -14,6 +14,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FileDropzone } from "@/components/ui/file-dropzone";
+import { uploadDisabledFor } from "@/lib/uploadGate";
 
 interface CourseRow {
   courseKey: number;
@@ -210,7 +211,7 @@ export function LibraryPage() {
   }, [list.data, filter]);
 
   const banner = buildBanner(capacity.data);
-  const uploadDisabled = capacity.data?.isCoursesOverLimit ?? false;
+  const uploadDisabled = uploadDisabledFor(capacity.data);
 
   // Group 3 client impressions, deduped per page-view. The
   // banner always carries a View plans CTA; upload_blocked_shown is the

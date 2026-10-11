@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/lib/api";
 import { discoverSso, isDiscoverable } from "@/lib/sso";
+import { returnPathFrom } from "@/lib/returnPath";
 import type { LoginRequest, MeResponse, MfaSetupResponse, ProblemResponse } from "@/lib/types";
 import { LobbyLayout } from "@/components/LobbyLayout";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -115,10 +116,17 @@ export function LoginPage() {
   // return without refetching and the guard on the landing route would then
   // read whatever /me returned before sign-in. It also fills in tenantHandle
   // and tenantType, which the login response leaves empty.
+  // A signed-out visit to a page arrives here with the page in ?next=, and
+  // signing in goes on to it: every link in an account email opens a page
+  // that needs a session. The page's own guard still applies, so a learner
+  // following a manager's link lands on the courses page as before.
+  const [search] = useSearchParams();
+  const returnTo = returnPathFrom(search);
+
   const finishLogin = async (me: MeResponse) => {
     await qc.invalidateQueries({ queryKey: ["auth", "me"], refetchType: "all" });
     // login_succeeded fires server-side from the login endpoint.
-    nav(me.isManager || me.isOperator ? "/dashboard" : "/courses");
+    nav(returnTo ?? (me.isManager || me.isOperator ? "/dashboard" : "/courses"));
   };
 
   const beginEnrollment = useMutation({

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link, NavLink, Navigate, useNavigate } from "react-router-dom";
+import { Link, NavLink, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { EnvironmentBadge, EnvironmentRule } from "@/components/EnvironmentBadge";
@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { tierLabel } from "@/lib/tiers";
 import type { MeResponse } from "@/lib/types";
+import { loginPathFor } from "@/lib/returnPath";
 
 // Auth-gated wrapper for admin surfaces (Phase 2+). Sidebar mirrors the plan
 // doc: Dashboard / Library / Users / Billing / Operator. Session B fills in
@@ -31,6 +32,7 @@ export function AppShell({
   align?: "center" | "left";
 }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const qc = useQueryClient();
   const nav = useNavigate();
 
@@ -41,7 +43,7 @@ export function AppShell({
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={loginPathFor(location)} replace />;
 
   const signOut = async () => {
     await api("/api/auth/logout", { method: "POST" });

@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import { loginPathFor } from "@/lib/returnPath";
 
 export function RequireManager({ children }: { children: ReactNode }) {
   const { user, loading, fetching } = useAuth();
+  const location = useLocation();
 
   // Hold on fetching as well as loading: a cached null from an earlier
   // signed-out visit leaves loading false while /me is still in flight, and
@@ -16,7 +18,7 @@ export function RequireManager({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={loginPathFor(location)} replace />;
   if (!user.isManager && !user.isOperator) return <Navigate to="/courses" replace />;
   return <>{children}</>;
 }

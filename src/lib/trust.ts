@@ -303,9 +303,9 @@ export const SUBPROCESSORS: Subprocessor[] = [
   },
   {
     name: "Loops",
-    purpose: "Lifecycle email",
+    purpose: "Account and billing email (onboarding tips, plan and payment notices)",
     location: "United States",
-    data: "Customer contact data only",
+    data: "Account admin name and email, organization name, plan and payment status, and account usage totals. No learner names or emails.",
   },
   {
     name: "PostHog",
