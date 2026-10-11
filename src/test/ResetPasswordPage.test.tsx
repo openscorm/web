@@ -12,15 +12,24 @@ import { ResetPasswordPage } from "@/routes/ResetPasswordPage";
 // was until it expires.
 
 let bodies: unknown[];
+let completeStatus: number;
 
 beforeEach(() => {
   bodies = [];
+  completeStatus = 204;
   vi.stubGlobal(
     "fetch",
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/auth/password-reset/complete")) {
         bodies.push(JSON.parse(String(init?.body)));
+        if (completeStatus === 410)
+          return Promise.resolve(
+            new Response(JSON.stringify({ status: 410, title: "Link expired" }), {
+              status: 410,
+              headers: { "Content-Type": "application/problem+json" },
+            }),
+          );
         return Promise.resolve(new Response(null, { status: 204 }));
       }
       return Promise.resolve(new Response("null", { status: 200 }));
@@ -104,5 +113,62 @@ describe("ResetPasswordPage", () => {
     expect(bodies).toEqual([
       { token: "0123456789abcdef0123456789abcdef.s3cret", password: "a-new-password-1" },
     ]);
+  });
+
+  it("tells an invited learner who added them and what the password is for", () => {
+    renderAt("/welcome?token=0123456789abcdef0123456789abcdef.s3cret");
+
+    expect(
+      screen.getByText(
+        "Your organization has added you to OpenSCORM. Choose a password to sign in and see your courses.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // An invitation lives seven days and often sits in an inbox past that. The
+  // learner is offered a new link, not sent round to try the dead one again.
+  it("offers a new link when the invitation has expired", async () => {
+    completeStatus = 410;
+    renderAt("/welcome?token=0123456789abcdef0123456789abcdef.s3cret");
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Choose a password"), "a-new-password-1");
+    await user.type(screen.getByLabelText("Confirm password"), "a-new-password-1");
+    await user.click(screen.getByRole("button", { name: "Set password" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "This invitation link has expired" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Request a new one and we'll email it to you.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request a new link" })).toHaveAttribute(
+      "href",
+      "/forgot",
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("offers a new link when a reset link has expired", async () => {
+    completeStatus = 410;
+    renderAt("/reset?token=0123456789abcdef0123456789abcdef.s3cret");
+
+    await submit();
+
+    expect(
+      await screen.findByRole("heading", { name: "This reset link has expired" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request a new link" })).toHaveAttribute(
+      "href",
+      "/forgot",
+    );
+  });
+
+  it("asks for a new invitation link, without blame, when the token is missing", () => {
+    renderAt("/welcome");
+
+    expect(screen.getByText("Invalid invitation link")).toBeInTheDocument();
+    expect(
+      screen.getByText("This link isn't complete. Request a new one and we'll email it to you."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Start over/)).not.toBeInTheDocument();
   });
 });

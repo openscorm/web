@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import type { ProblemResponse } from "@/lib/types";
 import { LobbyLayout } from "@/components/LobbyLayout";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -26,12 +27,21 @@ type FormValues = z.infer<typeof schema>;
 // The same page serves two links. A reset is asked for by someone who had a
 // password; a welcome is the invitation a learner gets when a manager adds
 // them, and they have never had one. Same token, same endpoint, different words.
+//
+// A link that ran out answers 410 and gets its own state, so the person is
+// offered a new link rather than told to try again. The welcome words are
+// Product's; the reset ones follow the same pattern.
 const COPY = {
   reset: {
     pageTitle: "Reset your password | OpenSCORM",
     invalidTitle: "Invalid reset link",
+    invalidBody: "The link is missing required information. Start over.",
     invalidAction: "Request a new link",
+    expiredTitle: "This reset link has expired",
+    expiredBody: "Request a new one and we'll email it to you.",
+    expiredAction: "Request a new link",
     heading: "Set new password",
+    intro: null,
     done: "Password updated. Sign in with your new password.",
     passwordLabel: "New password",
     submit: "Change password",
@@ -41,8 +51,14 @@ const COPY = {
   welcome: {
     pageTitle: "Set up your account | OpenSCORM",
     invalidTitle: "Invalid invitation link",
+    invalidBody: "This link isn't complete. Request a new one and we'll email it to you.",
     invalidAction: "Request a password reset",
+    expiredTitle: "This invitation link has expired",
+    expiredBody: "Request a new one and we'll email it to you.",
+    expiredAction: "Request a new link",
     heading: "Set up your account",
+    intro:
+      "Your organization has added you to OpenSCORM. Choose a password to sign in and see your courses.",
     done: "Your password is set. Sign in to see your courses.",
     passwordLabel: "Choose a password",
     submit: "Set password",
@@ -50,6 +66,22 @@ const COPY = {
     failed: "Setting your password failed.",
   },
 } as const;
+
+// A link the page cannot use: missing its token, or run out. Either way the
+// way forward is a new one.
+function LinkProblem({ title, body, action }: { title: string; body: string; action: string }) {
+  return (
+    <LobbyLayout>
+      <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
+        <h1 className="mb-2 text-2xl font-bold tracking-tight">{title}</h1>
+        <p className="text-muted-foreground mb-6 text-sm">{body}</p>
+        <Link to="/forgot" className="text-link text-sm hover:underline">
+          {action}
+        </Link>
+      </div>
+    </LobbyLayout>
+  );
+}
 
 // The reset URL is emailed as
 //   https://app.openscorm.com/reset?token=<id>.<secret>
@@ -67,6 +99,7 @@ export function ResetPasswordPage({ variant = "reset" }: { variant?: "reset" | "
   const token = search.get("token") ?? "";
   const nav = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [expired, setExpired] = useState(false);
   const [done, setDone] = useState(false);
 
   const { register, handleSubmit, formState } = useForm<FormValues>({
@@ -86,7 +119,9 @@ export function ResetPasswordPage({ variant = "reset" }: { variant?: "reset" | "
       }),
     onSuccess: () => setDone(true),
     onError: (err) => {
-      if (err instanceof ApiError && err.problem) {
+      if (err instanceof ApiError && err.status === 410) {
+        setExpired(true);
+      } else if (err instanceof ApiError && err.problem) {
         const problem = err.problem as ProblemResponse;
         setServerError(problem.detail ?? problem.title ?? copy.failed);
       } else {
@@ -97,24 +132,25 @@ export function ResetPasswordPage({ variant = "reset" }: { variant?: "reset" | "
 
   if (!token) {
     return (
-      <LobbyLayout>
-        <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
-          <h1 className="mb-2 text-2xl font-bold tracking-tight">{copy.invalidTitle}</h1>
-          <p className="text-muted-foreground mb-6 text-sm">
-            The link is missing required information. Start over.
-          </p>
-          <Link to="/forgot" className="text-link text-sm hover:underline">
-            {copy.invalidAction}
-          </Link>
-        </div>
-      </LobbyLayout>
+      <LinkProblem title={copy.invalidTitle} body={copy.invalidBody} action={copy.invalidAction} />
     );
   }
+
+  if (expired) {
+    return (
+      <LinkProblem title={copy.expiredTitle} body={copy.expiredBody} action={copy.expiredAction} />
+    );
+  }
+
+  const intro = done ? null : copy.intro;
 
   return (
     <LobbyLayout>
       <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
-        <h1 className="mb-6 text-3xl font-bold tracking-tight">{copy.heading}</h1>
+        <h1 className={cn("text-3xl font-bold tracking-tight", intro ? "mb-2" : "mb-6")}>
+          {copy.heading}
+        </h1>
+        {intro && <p className="text-muted-foreground mb-6 text-sm">{intro}</p>}
 
         {done ? (
           <>
