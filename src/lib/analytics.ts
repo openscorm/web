@@ -10,12 +10,17 @@ import type { MeResponse } from "@/lib/types";
 // non-empty key. The key is a public phc_ client key, safe to expose.
 //
 // There is no consent gate. Learners, managers and operators are all
-// tracked. Two live modes:
+// tracked, but only managers and operators are identified. Modes:
 //   off        - nothing captured, because config or /me has not resolved yet.
 //                posthog is not initialized, so autocapture cannot fire either.
 //   anonymous  - a signed-out visitor. Events flow with no identity.
-//   identified - any signed-in account. identify() ties events to the account
-//                and the tenant group.
+//   identified - a manager or an operator. identify() ties events to the
+//                account and the tenant group.
+//   learner    - a learner. A customer's learners are data we handle only on
+//                the customer's behalf, so their events carry the tenant and
+//                never the account: no identify, no group, and no person
+//                profile, because posthog-js creates one for any event that
+//                carries a group.
 // There is deliberately no opt_out_capturing call anywhere in this module.
 // posthog-js writes its opt-out flag to localStorage whatever `persistence` is
 // set to, so that call was the last thing putting state on the device. With
@@ -24,7 +29,7 @@ import type { MeResponse } from "@/lib/types";
 // api_host may be a same-origin path (the reverse proxy on the API);
 // resolveApiHost turns it into the absolute URL posthog.init needs.
 
-type Mode = "off" | "anonymous" | "identified";
+type Mode = "off" | "anonymous" | "identified" | "learner";
 
 interface AnalyticsConfig {
   key: string;
@@ -35,7 +40,9 @@ interface AnalyticsConfig {
 let config: AnalyticsConfig | null = null;
 let initialized = false;
 let mode: Mode = "off";
-let identifiedAs: string | null = null;
+// The account the current session was set up for, identified or not, so a
+// re-render with the same /me does not reset it.
+let sessionFor: string | null = null;
 // The last identity seen before config arrived, replayed once it does. Three
 // states on purpose: undefined (nothing seen), null (signed out), a user.
 let pendingUser: MeResponse | null | undefined;
@@ -93,11 +100,31 @@ function stripUrlsIn(props: Record<string, unknown> | undefined): void {
   }
 }
 
+// Account keys in a path. The account detail, a learner's report and the
+// operator's account view each put one in the URL, and a learner's key must not
+// reach PostHog. A path survives the query stripping above, and it also turns
+// up in $pathname, in the previous pageview's path and in an autocaptured
+// click's link, so every string on the event is masked, not a list of
+// properties.
+const ACCOUNT_PATH = /\/(accounts|learners)\/\d+/g;
+
+export function maskAccountKeys(value: unknown, depth = 0): unknown {
+  if (typeof value === "string") return value.replace(ACCOUNT_PATH, "/$1/:id");
+  if (depth > 4 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((v) => maskAccountKeys(v, depth + 1));
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) record[key] = maskAccountKeys(record[key], depth + 1);
+  return record;
+}
+
 export function redactUrls(event: CaptureResult | null): CaptureResult | null {
   if (!event) return event;
   stripUrlsIn(event.properties);
   stripUrlsIn(event.$set);
   stripUrlsIn(event.$set_once);
+  maskAccountKeys(event.properties);
+  maskAccountKeys(event.$set);
+  maskAccountKeys(event.$set_once);
   return event;
 }
 
@@ -118,6 +145,9 @@ function ensureInit(): boolean {
     // The no-storage condition, now actually reachable: nothing written to or read
     // from cookie, localStorage or sessionStorage.
     persistence: "memory",
+    // Pinned rather than left to the library default: a person profile only
+    // for an identify() call, so a learner's events stay personless.
+    person_profiles: "identified_only",
     before_send: redactUrls,
   });
   initialized = true;
@@ -135,7 +165,14 @@ export function applyAnalyticsUser(me: MeResponse | null): void {
     return;
   }
 
-  setMode("identified", me);
+  setMode(isLearnerOnly(me) ? "learner" : "identified", me);
+}
+
+// A learner and nothing else. Someone who also manages is a manager. An
+// operator impersonating a learner arrives with the learner's flags, so the
+// session reads as the learner's.
+export function isLearnerOnly(me: MeResponse): boolean {
+  return me.isLearner && !me.isManager && !me.isOperator;
 }
 
 function setMode(next: Mode, me?: MeResponse): void {
@@ -143,26 +180,28 @@ function setMode(next: Mode, me?: MeResponse): void {
   const wasOff = mode === "off";
 
   if (next === "anonymous") {
-    if (identifiedAs !== null) {
+    if (sessionFor !== null) {
       // Leaving an identified session: a fresh anonymous id, so the next
       // person on this browser is not stitched to the last one.
       posthog.reset();
     }
     mode = "anonymous";
-    identifiedAs = null;
+    sessionFor = null;
     if (wasOff) capturePageview(window.location.href);
     return;
   }
 
   if (!me) return;
-  if (identifiedAs !== me.accountId) {
+  if (sessionFor !== me.accountId || mode !== next) {
     // A fresh anonymous id first, so nothing captured before we knew who this
-    // was gets merged into their profile by identify().
+    // was gets merged into their profile by identify(), and a learner's
+    // session starts with no group or identity left from the last one.
     posthog.reset();
-    identifyUser(me);
-    identifiedAs = me.accountId;
+    if (next === "learner") describeLearner(me);
+    else identifyUser(me);
+    sessionFor = me.accountId;
   }
-  mode = "identified";
+  mode = next;
   if (wasOff) capturePageview(window.location.href);
 }
 
@@ -210,6 +249,21 @@ function identifyUser(me: MeResponse): void {
   // tenant's pageviews and autocapture count even though its server events
   // are excluded.
   posthog.register({
+    channel: me.channel ?? null,
+    is_community: Boolean(me.isCommunity),
+    is_test: Boolean(me.isTest),
+    ...(me.environment ? { environment: me.environment } : {}),
+  });
+}
+
+// A learner's events carry the tenant as plain properties, the same exclusion
+// dimensions every event carries, and nothing that names the learner.
+function describeLearner(me: MeResponse): void {
+  posthog.register({
+    tenant_key: String(me.tenantKey),
+    tenant_handle: me.tenantHandle,
+    tenant_type: me.tenantType,
+    is_learner: true,
     channel: me.channel ?? null,
     is_community: Boolean(me.isCommunity),
     is_test: Boolean(me.isTest),

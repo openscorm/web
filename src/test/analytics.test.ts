@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MeResponse } from "@/lib/types";
 
 // The mode machine no longer gates on consent, so what this file
-// guards changed. Two things matter now: every signed-in account is identified
-// (learners included), and NOTHING is ever written to the device. The second is
-// the one worth a test, because posthog-js writes its opt-out flag to
+// guards changed. Three things matter now: managers and operators are
+// identified, learners never are, and NOTHING is ever written to the device.
+// The last is worth a test because posthog-js writes its opt-out flag to
 // localStorage whatever `persistence` says, so a stray opt_out_capturing call
 // would silently break the no-storage condition with no visible symptom.
 // Each test re-imports the module so module-level state starts from "off".
@@ -82,6 +82,9 @@ describe("analytics mode machine", () => {
     // The no-storage condition: nothing on the device.
     expect(options.persistence).toBe("memory");
     expect(options.opt_out_capturing_by_default).toBeUndefined();
+    // A person profile only for identify(), so a learner's events stay
+    // personless whatever the library's default becomes.
+    expect(options.person_profiles).toBe("identified_only");
   });
 
   it("never opts in or out, because that flag is the one thing that would hit localStorage", async () => {
@@ -116,15 +119,52 @@ describe("analytics mode machine", () => {
     );
   });
 
-  it("a learner is identified too, same as anyone else", async () => {
+  // A customer's learners are data we handle only on the customer's behalf,
+  // so their events carry the tenant and never the account. No group either:
+  // posthog-js creates a person profile for any event that carries one.
+  it("a learner is never identified and joins no group, but still captures", async () => {
     const a = await load();
     a.applyAnalyticsUser(learner);
-    expect(ph.identify).toHaveBeenCalledTimes(1);
-    const [distinctId, props] = ph.identify.mock.calls[0] as [string, Record<string, unknown>];
-    expect(distinctId).toBe(learner.accountId);
-    expect(props.is_learner).toBe(true);
+    expect(ph.identify).not.toHaveBeenCalled();
+    expect(ph.group).not.toHaveBeenCalled();
     a.capture("course_launched");
     expect(ph.capture).toHaveBeenCalledWith("course_launched", undefined);
+  });
+
+  it("a learner's events carry the tenant and nothing that names the learner", async () => {
+    const a = await load();
+    a.applyAnalyticsUser({ ...learner, isTest: true });
+    const [props] = ph.register.mock.calls.at(-1) as [Record<string, unknown>];
+    expect(props).toMatchObject({
+      tenant_key: "3",
+      tenant_handle: "acme",
+      is_learner: true,
+      is_test: true,
+    });
+    const sent = JSON.stringify(props);
+    for (const value of [
+      learner.accountId,
+      String(learner.accountKey),
+      learner.email,
+      learner.name,
+    ]) {
+      expect(sent).not.toContain(value);
+    }
+  });
+
+  it("someone who also manages is identified as a manager", async () => {
+    const a = await load();
+    a.applyAnalyticsUser({ ...learner, isManager: true });
+    expect(ph.identify).toHaveBeenCalledTimes(1);
+  });
+
+  it("moving from a manager's session to a learner's drops the identity", async () => {
+    const a = await load();
+    a.applyAnalyticsUser(manager);
+    ph.reset.mockClear();
+    a.applyAnalyticsUser(learner);
+    expect(ph.reset).toHaveBeenCalledTimes(1);
+    expect(ph.identify).toHaveBeenCalledTimes(1); // the manager's, not the learner's
   });
 
   // The test-account filter keys on is_test. The server stamps it on its own
@@ -154,13 +194,16 @@ describe("analytics mode machine", () => {
   // person. That sentence is only true while this holds, for every role, so it
   // is asserted rather than left to a reviewer to notice.
   it("sends no email and no name for anyone", async () => {
-    for (const who of [manager, learner]) {
-      const a = await load();
-      a.applyAnalyticsUser(who);
-      const [, props] = ph.identify.mock.calls.at(-1) as [string, Record<string, unknown>];
-      expect(props).not.toHaveProperty("email");
-      expect(props).not.toHaveProperty("name");
-    }
+    const a = await load();
+    a.applyAnalyticsUser(manager);
+    const [, props] = ph.identify.mock.calls.at(-1) as [string, Record<string, unknown>];
+    expect(props).not.toHaveProperty("email");
+    expect(props).not.toHaveProperty("name");
+
+    a.applyAnalyticsUser(learner);
+    const [registered] = ph.register.mock.calls.at(-1) as [Record<string, unknown>];
+    expect(registered).not.toHaveProperty("email");
+    expect(registered).not.toHaveProperty("name");
   });
 
   it("signing out of an identified session resets to a fresh anonymous id", async () => {
@@ -278,5 +321,40 @@ describe("URL redaction", () => {
   it("passes a dropped event through as dropped", async () => {
     const { redactUrls } = await load();
     expect(redactUrls(null)).toBeNull();
+  });
+});
+
+// A path keeps its page name and loses any account key in it: the account
+// detail, a learner's report and the operator's account view all carry one,
+// and it reaches PostHog in more places than the URL properties.
+describe("account keys in paths", () => {
+  it("masks the key wherever a path appears on the event", async () => {
+    const { redactUrls } = await load();
+
+    const out = redactUrls({
+      uuid: "u",
+      event: "$autocapture",
+      properties: {
+        $current_url: "https://app.openscorm.com/reports/learners/41?period=current",
+        $pathname: "/reports/learners/41",
+        $prev_pageview_pathname: "/accounts/7",
+        $elements_chain: 'a:attr__href="/operator/accounts/12"nth-child="1"',
+        $elements: [{ tag_name: "a", attr__href: "/reports/learners/41" }],
+        course: "/library/41",
+      },
+      $set: { $current_url: "https://app.openscorm.com/accounts/7" },
+    })!;
+
+    expect(out.properties.$current_url).toBe("https://app.openscorm.com/reports/learners/:id");
+    expect(out.properties.$pathname).toBe("/reports/learners/:id");
+    expect(out.properties.$prev_pageview_pathname).toBe("/accounts/:id");
+    expect(out.properties.$elements_chain).toBe(
+      'a:attr__href="/operator/accounts/:id"nth-child="1"',
+    );
+    expect(out.properties.$elements).toEqual([
+      { tag_name: "a", attr__href: "/reports/learners/:id" },
+    ]);
+    expect(out.properties.course).toBe("/library/41");
+    expect(out.$set?.$current_url).toBe("https://app.openscorm.com/accounts/:id");
   });
 });
