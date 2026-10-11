@@ -30,6 +30,12 @@ export interface ImportResponse {
     headroom: number | null;
     ready: number;
     overBy: number;
+    // A metered plan with a cap: the cap, the active learners so far this
+    // period, and whether learners reached through dispatch are among them.
+    // Null when there is no cap to quote.
+    cap: number | null;
+    active: number | null;
+    includesDispatch: boolean;
   };
   counts: Record<ImportRow["status"], number>;
   rows: ImportRow[];
@@ -114,7 +120,56 @@ function ProblemRows({ rows }: { rows: ImportRow[] }) {
   );
 }
 
+// A metered plan counts a learner in a period they open a course, not when
+// they are added, so an import changes nothing on the bill by itself. The
+// manager is told the cap and where they stand, and warned, without being
+// stopped, when the file could carry them over it. The words are Product's.
+function MeteredCapNote({
+  cap,
+  active,
+  ready,
+  includesDispatch,
+}: {
+  cap: number;
+  active: number;
+  ready: number;
+  includesDispatch: boolean;
+}) {
+  return (
+    <>
+      <p className="text-muted-foreground mt-3 text-sm">
+        Your plan covers <strong>{cap.toLocaleString()}</strong> active learners a billing period.
+        You're at <strong>{active.toLocaleString()}</strong> so far this period
+        {includesDispatch && ", including learners reached through dispatch"}. Imported learners
+        count only in a period they open a course, so nothing changes until they do.
+      </p>
+      {ready + active > cap && (
+        <div
+          role="status"
+          className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          If everyone in this file opens a course this period, you'd be over your plan's cap.
+          Nothing is blocked.{" "}
+          <Link to="/billing" className="font-medium underline">
+            How the cap works
+          </Link>
+        </div>
+      )}
+    </>
+  );
+}
+
 function CapacityNote({ capacity }: { capacity: ImportResponse["capacity"] }) {
+  if (capacity.metered && capacity.cap != null && capacity.active != null) {
+    return (
+      <MeteredCapNote
+        cap={capacity.cap}
+        active={capacity.active}
+        ready={capacity.ready}
+        includesDispatch={capacity.includesDispatch}
+      />
+    );
+  }
   if (capacity.metered) {
     return (
       <p className="text-muted-foreground mt-3 text-sm">

@@ -68,7 +68,16 @@ let previewBody: ImportResponse;
 beforeEach(() => {
   calls = [];
   previewBody = {
-    capacity: { limited: false, metered: false, headroom: null, ready: 2, overBy: 0 },
+    capacity: {
+      limited: false,
+      metered: false,
+      headroom: null,
+      ready: 2,
+      overBy: 0,
+      cap: null,
+      active: null,
+      includesDispatch: false,
+    },
     counts: counts({ ready: 2, invalid: 1, existing: 1 }),
     rows,
     resultsCsv: null,
@@ -146,7 +155,7 @@ describe("LearnerImportCard", () => {
   });
 
   it("says how many fit when the plan is full, and imports only those", async () => {
-    previewBody.capacity = { limited: true, metered: false, headroom: 1, ready: 2, overBy: 1 };
+    previewBody.capacity = { ...previewBody.capacity, limited: true, headroom: 1, overBy: 1 };
     renderCard();
     await checkFile();
 
@@ -158,8 +167,8 @@ describe("LearnerImportCard", () => {
     expect(screen.getByRole("button", { name: "Import 1 learner" })).toBeEnabled();
   });
 
-  it("tells a metered organization how imported learners count", async () => {
-    previewBody.capacity = { limited: false, metered: true, headroom: null, ready: 2, overBy: 0 };
+  it("tells an uncapped metered organization how imported learners count", async () => {
+    previewBody.capacity = { ...previewBody.capacity, metered: true };
     renderCard();
     await checkFile();
 
@@ -167,5 +176,71 @@ describe("LearnerImportCard", () => {
       await screen.findByText(/count toward your active learners in the period they first launch/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Upgrade your plan" })).not.toBeInTheDocument();
+  });
+
+  // A paid plan counts a learner in a period they open a course, so the
+  // preview quotes the cap and where the organization stands, and warns
+  // without blocking when the file could carry them over.
+  it("quotes the cap and this period's count, with the dispatch clause when it applies", async () => {
+    previewBody.capacity = {
+      ...previewBody.capacity,
+      metered: true,
+      cap: 250,
+      active: 240,
+      includesDispatch: true,
+    };
+    renderCard();
+    await checkFile();
+
+    expect(
+      await screen.findByText(
+        (_, el) =>
+          el?.tagName === "P" &&
+          el.textContent ===
+            "Your plan covers 250 active learners a billing period. You're at 240 so far this period, including learners reached through dispatch. Imported learners count only in a period they open a course, so nothing changes until they do.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("leaves out the dispatch clause when no dispatch learners are counted", async () => {
+    previewBody.capacity = { ...previewBody.capacity, metered: true, cap: 250, active: 240 };
+    renderCard();
+    await checkFile();
+
+    expect(
+      await screen.findByText(
+        (_, el) =>
+          el?.tagName === "P" &&
+          el.textContent?.startsWith(
+            "Your plan covers 250 active learners a billing period. You're at 240 so far this period. Imported",
+          ) === true,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/reached through dispatch/)).not.toBeInTheDocument();
+  });
+
+  it("warns, without blocking, when the file could carry the plan over its cap", async () => {
+    previewBody.capacity = { ...previewBody.capacity, metered: true, cap: 250, active: 249 };
+    renderCard();
+    await checkFile();
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "If everyone in this file opens a course this period, you'd be over your plan's cap. Nothing is blocked. How the cap works",
+    );
+    expect(screen.getByRole("link", { name: "How the cap works" })).toHaveAttribute(
+      "href",
+      "/billing",
+    );
+    expect(screen.getByRole("button", { name: "Import 2 learners" })).toBeEnabled();
+  });
+
+  it("does not warn when the file lands exactly on the cap", async () => {
+    previewBody.capacity = { ...previewBody.capacity, metered: true, cap: 250, active: 248 };
+    renderCard();
+    await checkFile();
+
+    expect(await screen.findByText(/Your plan covers/)).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });
