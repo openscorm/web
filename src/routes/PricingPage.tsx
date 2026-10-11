@@ -9,6 +9,7 @@ import { useImpression } from "@/hooks/useImpression";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate } from "@/lib/dates";
+import { tierLabel } from "@/lib/tiers";
 import {
   Dialog,
   DialogContent,
@@ -200,7 +201,8 @@ export function PricingPage() {
         title="Pricing"
         subtitle={
           <>
-            Current plan: <span className="text-foreground font-semibold">{currentTier}</span>.
+            Current plan:{" "}
+            <span className="text-foreground font-semibold">{tierLabel(currentTier)}</span>.
           </>
         }
         restricted={[
@@ -351,7 +353,7 @@ export function PricingPage() {
                 )}
                 <ul className="text-muted-foreground mt-4 mb-6 flex-1 space-y-1 text-sm">
                   <li>{t.courseLimit} courses</li>
-                  <li>{t.userLimit} users</li>
+                  <li>Up to {t.userLimit.toLocaleString()} active learners per billing period</li>
                 </ul>
                 {!isCurrent && (
                   <button
