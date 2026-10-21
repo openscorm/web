@@ -87,6 +87,15 @@ describe("analytics mode machine", () => {
     expect(options.person_profiles).toBe("identified_only");
   });
 
+  it("counts clicks without sending the clicked element's text or attributes", async () => {
+    const a = await load();
+    a.applyAnalyticsUser(null);
+    const options = ph.init.mock.calls[0][1] as Record<string, unknown>;
+    expect(options.autocapture).toBe(true);
+    expect(options.mask_all_text).toBe(true);
+    expect(options.mask_all_element_attributes).toBe(true);
+  });
+
   it("never opts in or out, because that flag is the one thing that would hit localStorage", async () => {
     const a = await load();
     a.applyAnalyticsUser(null);
@@ -190,9 +199,10 @@ describe("analytics mode machine", () => {
     }
   });
 
-  // The /trust page states that events are tied to the account and not the
-  // person. That sentence is only true while this holds, for every role, so it
-  // is asserted rather than left to a reviewer to notice.
+  // The /trust page states that managers' events are tied to their account and
+  // learners' carry no name, email address or account. That is only true while
+  // this holds, for every role, so it is asserted rather than left to a
+  // reviewer to notice.
   it("sends no email and no name for anyone", async () => {
     const a = await load();
     a.applyAnalyticsUser(manager);

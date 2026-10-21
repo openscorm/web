@@ -89,8 +89,12 @@ export const STATUS_LABEL: Record<ControlStatus, string> = {
   infrastructure: "Infrastructure",
 };
 
-/** Last time Engineering reviewed every line on this page for accuracy. */
-export const TRUST_LAST_REVIEWED = "2026-09-17";
+/**
+ * Last time every line on this page was reviewed for accuracy. The wording
+ * mirrors the marketing site's /trust, so this carries its date when the two
+ * match.
+ */
+export const TRUST_LAST_REVIEWED = "2026-10-11";
 
 /** Where to report a suspected vulnerability. */
 export const DISCLOSURE_EMAIL = "security@openscorm.com";
@@ -110,7 +114,7 @@ export const TRUST_SECTIONS: TrustSection[] = [
       {
         title: "Multi-factor authentication",
         detail:
-          "Accounts can enable time-based one-time-password (TOTP) two-factor sign-in, remember trusted devices for a chosen window, and a tenant can require two-factor for its members.",
+          "Accounts can enable time-based one-time-password (TOTP) two-factor sign-in, remember trusted devices for a chosen window, and a tenant can require two-factor for its members. A single sign-on relies on your identity provider's own two-factor rather than ours.",
         status: "in-place",
       },
       {
@@ -128,7 +132,7 @@ export const TRUST_SECTIONS: TrustSection[] = [
       {
         title: "Single sign-on (SAML 2.0)",
         detail:
-          "SAML 2.0 single sign-on, so a customer manages access from their own directory and a person who leaves it loses access here. Proven end to end against Microsoft Entra ID, and built to the SAML 2.0 standard rather than to one vendor. Setup is configured with your IT team rather than self-serve, and roles stay managed in OpenSCORM: we do not map them from directory groups.",
+          "SAML 2.0 single sign-on, so a customer's people sign in through their own directory. Proven end to end against Microsoft Entra ID, and built to the SAML 2.0 standard rather than to one vendor. Setup is configured with your IT team rather than self-serve, and roles stay managed in OpenSCORM: we do not map them from directory groups. Password sign-in stays available alongside it, and removing someone from your directory doesn't close their OpenSCORM account, so deactivate them here as well.",
         status: "in-place",
       },
     ],
@@ -196,7 +200,7 @@ export const TRUST_SECTIONS: TrustSection[] = [
       {
         title: "Product analytics, minimized",
         detail:
-          "Product-usage analytics run for all user accounts. Events are tied to the account, not the person, and what we collect and why is set out in our privacy policy.",
+          "Product-usage analytics run for administrators and managers, tied to their account. Learner activity is counted by organization only, with no name, email address or account attached. What we collect and why is set out in our privacy policy.",
         status: "in-place",
       },
       {
@@ -305,12 +309,12 @@ export const SUBPROCESSORS: Subprocessor[] = [
     name: "Loops",
     purpose: "Account and billing email (onboarding tips, plan and payment notices)",
     location: "United States",
-    data: "Account admin name and email, organization name, plan and payment status, and account usage totals. No learner names or emails.",
+    data: "Account admin first name and email, organization name, course titles, signup source and date, plan, billing amounts and dates, payment status, and account usage totals. No learner names or emails.",
   },
   {
     name: "PostHog",
-    purpose: "Product-usage analytics",
+    purpose: "Product and website analytics",
     location: "United States (US Cloud)",
-    data: "Product-interaction events, keyed to an account",
+    data: "Product-usage events. Administrators and managers by account; learners by organization only, with no name, email or account. Website visits are counted with no account attached.",
   },
 ];

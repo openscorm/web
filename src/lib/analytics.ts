@@ -138,6 +138,12 @@ function ensureInit(): boolean {
     // alone misses client-side navigations.
     capture_pageview: false,
     autocapture: true,
+    // A click is counted, never read. Autocapture would otherwise send the
+    // clicked element's text and attributes, and on the people tables that
+    // text is a name or an email. Masked here, the words never leave the
+    // browser; the element's tag and position still do.
+    mask_all_text: true,
+    mask_all_element_attributes: true,
     // No session replay. Recording a compliance product's screens is a privacy
     // liability we are not taking on here; a consent-gated opt-in would be its
     // own decision alongside a cookie-consent banner.
@@ -221,8 +227,8 @@ export function capturePageview(url: string): void {
 // funnel, cohort and per-person sequence works without them; what they bought
 // was reading a name instead of a GUID in the PostHog UI, recoverable with a
 // lookup on account_id whenever that is actually needed. Leaving them out is
-// what makes the /trust claim "events are tied to the account, not the person"
-// true as written rather than true only for learners.
+// what keeps the /trust claim true for managers too: their events are tied to
+// the account, and no name or email address goes with them.
 function identifyUser(me: MeResponse): void {
   posthog.identify(me.accountId, {
     tenant_handle: me.tenantHandle,
