@@ -13,7 +13,7 @@ const appVersion = process.env.APP_VERSION ?? pkg.version;
 // Where `npm run dev` proxies API calls. 5100, not the ASP.NET default 5000,
 // because another local service may already own 5000 on a developer machine.
 // Override to follow `start.ps1 -ApiPort <n>`; the two are separate workflows
-// (this proxy is only used at :5173, where start.ps1 serves the SPA from the
+// (this proxy is only used at :5177, where start.ps1 serves the SPA from the
 // API itself) but they should be able to agree.
 const apiProxyTarget = process.env.VITE_API_TARGET ?? "http://localhost:5100";
 
@@ -30,7 +30,11 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(appVersion),
   },
   server: {
-    port: 5173,
+    // 5177, not Vite's default 5173: Bump's dev server owns 5173 on a developer
+    // machine that runs both. strictPort makes a busy port a failed start rather
+    // than a silent move onto whichever port another app expected to have.
+    port: 5177,
+    strictPort: true,
     fs: {
       // The dispatch launcher lives in the .NET project, because that project
       // is what embeds it in the generated package. Its test imports it as
