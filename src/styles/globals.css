@@ -1,7 +1,7 @@
 @import "tailwindcss";
-/* Tokens and base rules come from the design registry (@design/palette-openscorm), whose palette
+/* Tokens and base rules come from the Loom registry (@loom/palette-openscorm), whose palette
    mirrors www.openscorm.com so a visitor crossing into the app sees one look. Reinstall them
-   through the shadcn CLI rather than editing src/styles/design/ by hand. App rules go below the
+   through the shadcn CLI rather than editing src/styles/loom/ by hand. App rules go below the
    imports. */
-@import "./design/base.css";
-@import "./design/palettes/openscorm.css";
+@import "./loom/base.css";
+@import "./loom/palettes/openscorm.css";

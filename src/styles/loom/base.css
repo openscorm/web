@@ -1,10 +1,10 @@
 /*
-  Shared tokens for every app. The registry copies this file to src/styles/design/base.css and
+  Shared tokens for every app. The registry copies this file to src/styles/loom/base.css and
   installs tw-animate-css; the app imports it after Tailwind and before exactly one palette:
 
     @import "tailwindcss";
-    @import "./design/base.css";
-    @import "./design/palettes/<app>.css";
+    @import "./loom/base.css";
+    @import "./loom/palettes/<app>.css";
 
   The accent group below is a default indigo, so base.css alone still renders. A palette sets
   --color-primary, --color-primary-foreground, and --color-link; the derived tokens recompute from

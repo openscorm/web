@@ -18,6 +18,6 @@
     "utils": "@/lib/cn"
   },
   "registries": {
-    "@design": "https://design.danielmiller.ca/r/{name}.json"
+    "@loom": "https://loom.danielmiller.ca/r/{name}.json"
   }
 }
