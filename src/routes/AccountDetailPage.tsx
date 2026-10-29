@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AccountAdminActions } from "@/components/AccountAdminActions";
 import { AccountManagerActions } from "@/components/AccountManagerActions";
 import { AppShell } from "@/components/AppShell";
+import { AssignedCoursesCard } from "@/components/AssignedCoursesCard";
 import { PageHeader } from "@/components/ui/page-header";
 import { DetailCard, DetailGrid, Field } from "@/components/DetailCard";
 import { PageLoading } from "@/components/PageLoading";
@@ -129,6 +130,13 @@ export function AccountDetailPage() {
               </Field>
             </DetailGrid>
           </DetailCard>
+          {account.isLearner && account.isActive && tenantKey !== undefined && (
+            <AssignedCoursesCard
+              tenantKey={tenantKey}
+              accountKey={account.accountKey}
+              name={account.name}
+            />
+          )}
         </div>
       )}
     </AppShell>

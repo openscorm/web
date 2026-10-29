@@ -49,24 +49,42 @@ function row(key: number, name: string) {
 }
 
 let requests: string[];
+let posts: unknown[];
 
 beforeEach(() => {
   requests = [];
+  posts = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn((input: RequestInfo | URL) => {
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       requests.push(url);
+      if (url.endsWith("/api/tenants/7/courses"))
+        return Promise.resolve(
+          json([{ courseKey: 3, courseSlug: "uk-export", title: "UK Export Control" }]),
+        );
+      if (url.endsWith("/api/tenants/7/assignments") && init?.method === "POST") {
+        posts.push(JSON.parse(String(init.body)));
+        return Promise.resolve(
+          json({ assigned: 51, alreadyAssigned: 0, alreadyCompleted: 0, skippedDeactivated: 0 }),
+        );
+      }
       const params = new URL(url, "http://localhost").searchParams;
       const page = Number(params.get("page") ?? "1");
       const search = params.get("search") ?? "";
       if (search === "ann")
         return Promise.resolve(
-          json({ items: [row(1, "Ann Lee")], total: 1, page: 1, pageSize: 50 }),
+          json({ items: [row(1, "Ann Lee")], total: 1, learnerTotal: 1, page: 1, pageSize: 50 }),
         );
       if (page === 2)
         return Promise.resolve(
-          json({ items: [row(51, "Zed Young")], total: 51, page: 2, pageSize: 50 }),
+          json({
+            items: [row(51, "Zed Young")],
+            total: 51,
+            learnerTotal: 51,
+            page: 2,
+            pageSize: 50,
+          }),
         );
       return Promise.resolve(
         json({
@@ -74,6 +92,7 @@ beforeEach(() => {
             row(i + 1, i === 0 ? "Ann Lee" : `Person ${i + 1}`),
           ),
           total: 51,
+          learnerTotal: 51,
           page: 1,
           pageSize: 50,
         }),
@@ -134,5 +153,39 @@ describe("AccountsPage roster", () => {
     );
     expect(await screen.findByText("1-1 of 1")).toBeInTheDocument();
     expect(screen.queryByText("Zed Young")).not.toBeInTheDocument();
+  });
+});
+
+describe("AccountsPage assignment", () => {
+  it("assigns to every learner matching by sending the search, not the page's ids", async () => {
+    renderPage();
+    const user = userEvent.setup();
+    await screen.findByText("Ann Lee");
+
+    await user.click(screen.getByLabelText("Select every learner on this page"));
+    expect(screen.getByText("50 selected")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Select all 51 learners" }));
+    expect(screen.getByText("51 selected")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Assign courses" }));
+    await user.click(await screen.findByLabelText("UK Export Control"));
+    await user.click(screen.getByRole("button", { name: "Assign 1 course" }));
+
+    await waitFor(() => expect(posts).toEqual([{ learnerSearch: "", courseKeys: [3] }]));
+    expect(await screen.findByText("51 new assignments")).toBeInTheDocument();
+  });
+
+  it("assigns to the rows ticked by hand as ids", async () => {
+    renderPage();
+    const user = userEvent.setup();
+    await screen.findByText("Ann Lee");
+
+    await user.click(screen.getByLabelText("Select Ann Lee"));
+    await user.click(screen.getByLabelText("Select Person 2"));
+    await user.click(screen.getByRole("button", { name: "Assign courses" }));
+    await user.click(await screen.findByLabelText("UK Export Control"));
+    await user.click(screen.getByRole("button", { name: "Assign 1 course" }));
+
+    await waitFor(() => expect(posts).toEqual([{ accountKeys: [1, 2], courseKeys: [3] }]));
   });
 });

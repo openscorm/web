@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LearnerImportCard } from "@/components/LearnerImportCard";
+import { AssignCoursesDialog, type AssignTarget } from "@/components/AssignCoursesDialog";
 
 interface AccountRow {
   accountKey: number;
@@ -44,6 +45,9 @@ interface AccountRow {
 interface AccountPage {
   items: AccountRow[];
   total: number;
+  // The learners among total: what "select all matching" assigns to, since a
+  // course is never assigned to a manager-only account.
+  learnerTotal: number;
   page: number;
   pageSize: number;
 }
@@ -78,6 +82,14 @@ export function AccountsPage() {
     accountKey: number;
     name: string;
   } | null>(null);
+
+  // Learners picked for an assignment. The picks survive paging, and
+  // allMatching widens them to every learner the current search matches,
+  // which the server resolves. A new search clears both, since the rows they
+  // were picked from are gone.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [allMatching, setAllMatching] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
 
   // Search is part of the key so a change refetches, and it resets the page:
   // holding page 7 while narrowing to 3 results would show an empty table.
@@ -142,6 +154,63 @@ export function AccountsPage() {
       await qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "users"] });
     },
   });
+
+  const pageLearners = (list.data?.items ?? []).filter((u) => u.isLearner);
+  const learnerTotal = list.data?.learnerTotal ?? 0;
+  const pageAllSelected =
+    pageLearners.length > 0 && pageLearners.every((u) => allMatching || selected.has(u.accountKey));
+  const selectedCount = allMatching ? learnerTotal : selected.size;
+
+  function clearSelection() {
+    setSelected(new Set());
+    setAllMatching(false);
+  }
+
+  function toggleRow(accountKey: number) {
+    // Unticking one row out of "all matching" falls back to this page's
+    // learners less that one: the other pages' rows cannot be listed here.
+    if (allMatching) {
+      setAllMatching(false);
+      setSelected(
+        new Set(pageLearners.map((u) => u.accountKey).filter((key) => key !== accountKey)),
+      );
+      return;
+    }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(accountKey)) next.delete(accountKey);
+      else next.add(accountKey);
+      return next;
+    });
+  }
+
+  function togglePage() {
+    if (pageAllSelected) {
+      if (allMatching) {
+        clearSelection();
+        return;
+      }
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pageLearners.forEach((u) => next.delete(u.accountKey));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pageLearners.forEach((u) => next.add(u.accountKey));
+        return next;
+      });
+    }
+  }
+
+  function openAssign() {
+    setAssignTarget(
+      allMatching
+        ? { kind: "search", search: search.trim(), learnerCount: learnerTotal }
+        : { kind: "accounts", accountKeys: [...selected] },
+    );
+  }
 
   return (
     <AppShell align="left">
@@ -222,7 +291,7 @@ export function AccountsPage() {
       {config.data?.bulkImport && tenantKey && <LearnerImportCard tenantKey={tenantKey} />}
 
       <Card className="overflow-hidden">
-        <div className="border-border border-b px-4 py-3">
+        <div className="border-border flex flex-wrap items-center gap-3 border-b px-4 py-3">
           <label htmlFor="account-search" className="sr-only">
             Search accounts
           </label>
@@ -234,13 +303,65 @@ export function AccountsPage() {
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(1);
+              clearSelection();
             }}
             className="max-w-sm"
           />
+          {selectedCount > 0 && (
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">
+                {selectedCount.toLocaleString()} selected
+              </span>
+              <Button type="button" variant="outline" onClick={clearSelection}>
+                Clear
+              </Button>
+              <Button type="button" onClick={openAssign}>
+                Assign courses
+              </Button>
+            </div>
+          )}
         </div>
+        {pageAllSelected && learnerTotal > pageLearners.length && (
+          <div className="bg-muted border-border border-b px-4 py-2 text-sm">
+            {allMatching ? (
+              <>
+                All {learnerTotal.toLocaleString()} learners
+                {search.trim() ? ` matching "${search.trim()}"` : ""} are selected.{" "}
+                <button
+                  type="button"
+                  className="text-link hover:underline"
+                  onClick={clearSelection}
+                >
+                  Clear selection
+                </button>
+              </>
+            ) : (
+              <>
+                All {pageLearners.length} learners on this page are selected.{" "}
+                <button
+                  type="button"
+                  className="text-link hover:underline"
+                  onClick={() => setAllMatching(true)}
+                >
+                  Select all {learnerTotal.toLocaleString()} learners
+                  {search.trim() ? ` matching "${search.trim()}"` : ""}
+                </button>
+              </>
+            )}
+          </div>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  aria-label="Select every learner on this page"
+                  checked={pageAllSelected}
+                  disabled={pageLearners.length === 0}
+                  onChange={togglePage}
+                />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Roles</TableHead>
@@ -248,14 +369,24 @@ export function AccountsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {list.isLoading && <TableStateRow colSpan={4}>Loading…</TableStateRow>}
+            {list.isLoading && <TableStateRow colSpan={5}>Loading…</TableStateRow>}
             {list.data?.total === 0 && (
-              <TableStateRow colSpan={4}>
+              <TableStateRow colSpan={5}>
                 {search.trim() ? "No accounts match" : "No accounts yet"}
               </TableStateRow>
             )}
             {list.data?.items.map((u) => (
               <TableRow key={u.accountKey}>
+                <TableCell>
+                  {u.isLearner && (
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${u.name}`}
+                      checked={allMatching || selected.has(u.accountKey)}
+                      onChange={() => toggleRow(u.accountKey)}
+                    />
+                  )}
+                </TableCell>
                 <TableCell>
                   <Link to={`/accounts/${u.accountKey}`} className="text-link hover:underline">
                     {u.name}
@@ -281,6 +412,19 @@ export function AccountsPage() {
                       <DropdownMenuItem asChild>
                         <Link to={`/accounts/${u.accountKey}`}>View details</Link>
                       </DropdownMenuItem>
+                      {u.isLearner && (
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            setAssignTarget({
+                              kind: "accounts",
+                              accountKeys: [u.accountKey],
+                              name: u.name,
+                            })
+                          }
+                        >
+                          Assign courses
+                        </DropdownMenuItem>
+                      )}
                       {u.isLearner && (
                         <DropdownMenuItem
                           onSelect={() =>
@@ -350,6 +494,20 @@ export function AccountsPage() {
           else deactivate.mutate(pendingAction.accountKey);
         }}
       />
+
+      {tenantKey !== undefined && (
+        <AssignCoursesDialog
+          tenantKey={tenantKey}
+          target={assignTarget}
+          onAssigned={() => {
+            // A finished assignment from the selection drops the picks; one
+            // from a row's menu leaves the selection as it was.
+            if (assignTarget?.kind === "search" || assignTarget?.name === undefined)
+              clearSelection();
+          }}
+          onClose={() => setAssignTarget(null)}
+        />
+      )}
     </AppShell>
   );
 }

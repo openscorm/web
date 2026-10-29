@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { MfaProvisioning } from "@/components/MfaProvisioning";
 import { PageHeader } from "@/components/ui/page-header";
+import { CourseVisibilityCard } from "@/components/CourseVisibilityCard";
 import { TenantApiKeysCard } from "@/components/TenantApiKeysCard";
 import { TenantSecurityCard } from "@/components/TenantSecurityCard";
 import { LinkVerificationCard } from "@/components/LinkVerificationCard";
@@ -268,6 +269,7 @@ export function SettingsPage() {
       {/* The tenant's sign-in policy: managers and operators only. */}
       {user && (user.isManager || user.isOperator) && <TenantSecurityCard user={user} />}
       {user && (user.isManager || user.isOperator) && <LinkVerificationCard user={user} />}
+      {user && (user.isManager || user.isOperator) && <CourseVisibilityCard user={user} />}
 
       {/* Server-to-server keys for the public API: managers and
           operators only. The secret is shown once, at issuance, and never again. */}
