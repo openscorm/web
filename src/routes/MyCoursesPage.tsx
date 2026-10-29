@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { api, apiBase } from "@/lib/api";
+import { formatDate } from "@/lib/dates";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,6 +13,10 @@ interface CourseRow {
   courseSlug: string;
   title: string;
   version: string;
+  attempts: number;
+  status: string | null;
+  // When a manager assigned this course to you; null when nobody did.
+  assignedAt: string | null;
   launcherStatusHtml: string;
   launchUrl: string;
   restartUrl: string | null;
@@ -26,6 +32,8 @@ export function MyCoursesPage() {
     enabled: !!tenantKey,
   });
 
+  const courses = useMemo(() => assignedFirst(list.data ?? []), [list.data]);
+
   return (
     <AppShell>
       <PageHeader className="mb-6" title="My courses" subtitle="Courses available to you" />
@@ -38,12 +46,17 @@ export function MyCoursesPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {list.data?.map((c) => (
+        {courses.map((c) => (
           <div
             key={c.courseKey}
             className="border-border bg-card text-card-foreground flex flex-col rounded-xl border p-5"
           >
             <h4 className="mb-3 text-lg font-semibold">{c.title || c.courseSlug}</h4>
+            {c.assignedAt && (
+              <div className="text-muted-foreground mb-2 text-xs">
+                Assigned {formatDate(c.assignedAt)}
+              </div>
+            )}
             <div
               className="text-muted-foreground mb-4 text-xs"
               dangerouslySetInnerHTML={{ __html: c.launcherStatusHtml }}
@@ -66,6 +79,22 @@ export function MyCoursesPage() {
       </div>
     </AppShell>
   );
+}
+
+// A course assigned to you sits above the rest until you start it, the most
+// recently assigned on top, so new training is the first thing you see.
+// Everything else keeps the order the server sent.
+function assignedFirst(rows: CourseRow[]): CourseRow[] {
+  const waiting = (c: CourseRow) => c.assignedAt !== null && notStarted(c);
+  const assigned = rows
+    .filter(waiting)
+    .sort((a, b) => Date.parse(b.assignedAt ?? "") - Date.parse(a.assignedAt ?? ""));
+  return [...assigned, ...rows.filter((c) => !waiting(c))];
+}
+
+// The same test the server uses for "You have not started this course."
+function notStarted(c: CourseRow): boolean {
+  return c.attempts <= 0 || c.status?.toLowerCase() === "launched";
 }
 
 function absoluteUrl(path: string): string {
