@@ -71,6 +71,7 @@ export function CourseDetailPage() {
   const qc = useQueryClient();
   const nav = useNavigate();
 
+  const [title, setTitle] = useState("");
   const [tag, setTag] = useState("");
   const [position, setPosition] = useState("Left");
   const [exitText, setExitText] = useState("Exit");
@@ -99,6 +100,7 @@ export function CourseDetailPage() {
 
   useEffect(() => {
     if (detail.data) {
+      setTitle(detail.data.title ?? "");
       setTag(detail.data.tag ?? "");
       setPosition(detail.data.navigationPosition || "Left");
       setExitText(detail.data.navigationExitText || "Exit");
@@ -110,6 +112,9 @@ export function CourseDetailPage() {
       api<void>(`/api/tenants/${tenantKey}/courses/${courseKey}`, {
         method: "PATCH",
         body: JSON.stringify({
+          // A policy document keeps its published title, so only a package
+          // sends one; leaving it out tells the server to keep what it has.
+          title: detail.data?.sourceType === "pdf" ? undefined : title,
           tag: tag.trim() || null,
           navigationPosition: position,
           navigationExitText: exitText,
@@ -425,6 +430,24 @@ export function CourseDetailPage() {
             {saveStatus && !saveError && (
               <div className="mb-3 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-xs text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
                 {saveStatus}
+              </div>
+            )}
+            {!isDocument && (
+              <div className="mb-3">
+                <label htmlFor="title" className="mb-1.5 block text-sm font-medium">
+                  Title
+                </label>
+                <input
+                  id="title"
+                  type="text"
+                  value={title}
+                  maxLength={300}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className={inputClass}
+                />
+                <span className="text-muted-foreground mt-1 block text-xs">
+                  Shown wherever the course appears, including its past records in reports
+                </span>
               </div>
             )}
             <div className="mb-3">
