@@ -130,7 +130,7 @@ export function AccountDetailPage() {
               </Field>
             </DetailGrid>
           </DetailCard>
-          {account.isLearner && account.isActive && tenantKey !== undefined && (
+          {account.isActive && tenantKey !== undefined && (
             <AssignedCoursesCard
               tenantKey={tenantKey}
               accountKey={account.accountKey}

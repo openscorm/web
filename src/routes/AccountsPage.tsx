@@ -45,9 +45,6 @@ interface AccountRow {
 interface AccountPage {
   items: AccountRow[];
   total: number;
-  // The learners among total: what "select all matching" assigns to, since a
-  // course is never assigned to a manager-only account.
-  learnerTotal: number;
   page: number;
   pageSize: number;
 }
@@ -83,10 +80,10 @@ export function AccountsPage() {
     name: string;
   } | null>(null);
 
-  // Learners picked for an assignment. The picks survive paging, and
-  // allMatching widens them to every learner the current search matches,
-  // which the server resolves. A new search clears both, since the rows they
-  // were picked from are gone.
+  // Accounts picked for an assignment, managers included, since managers take
+  // courses too. The picks survive paging, and allMatching widens them to every
+  // account the current search matches, which the server resolves. A new
+  // search clears both, since the rows they were picked from are gone.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [allMatching, setAllMatching] = useState(false);
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
@@ -155,11 +152,11 @@ export function AccountsPage() {
     },
   });
 
-  const pageLearners = (list.data?.items ?? []).filter((u) => u.isLearner);
-  const learnerTotal = list.data?.learnerTotal ?? 0;
+  const pageRows = list.data?.items ?? [];
+  const matchingTotal = list.data?.total ?? 0;
   const pageAllSelected =
-    pageLearners.length > 0 && pageLearners.every((u) => allMatching || selected.has(u.accountKey));
-  const selectedCount = allMatching ? learnerTotal : selected.size;
+    pageRows.length > 0 && pageRows.every((u) => allMatching || selected.has(u.accountKey));
+  const selectedCount = allMatching ? matchingTotal : selected.size;
 
   function clearSelection() {
     setSelected(new Set());
@@ -167,13 +164,11 @@ export function AccountsPage() {
   }
 
   function toggleRow(accountKey: number) {
-    // Unticking one row out of "all matching" falls back to this page's
-    // learners less that one: the other pages' rows cannot be listed here.
+    // Unticking one row out of "all matching" falls back to this page's rows
+    // less that one: the other pages' rows cannot be listed here.
     if (allMatching) {
       setAllMatching(false);
-      setSelected(
-        new Set(pageLearners.map((u) => u.accountKey).filter((key) => key !== accountKey)),
-      );
+      setSelected(new Set(pageRows.map((u) => u.accountKey).filter((key) => key !== accountKey)));
       return;
     }
     setSelected((prev) => {
@@ -192,13 +187,13 @@ export function AccountsPage() {
       }
       setSelected((prev) => {
         const next = new Set(prev);
-        pageLearners.forEach((u) => next.delete(u.accountKey));
+        pageRows.forEach((u) => next.delete(u.accountKey));
         return next;
       });
     } else {
       setSelected((prev) => {
         const next = new Set(prev);
-        pageLearners.forEach((u) => next.add(u.accountKey));
+        pageRows.forEach((u) => next.add(u.accountKey));
         return next;
       });
     }
@@ -207,7 +202,7 @@ export function AccountsPage() {
   function openAssign() {
     setAssignTarget(
       allMatching
-        ? { kind: "search", search: search.trim(), learnerCount: learnerTotal }
+        ? { kind: "search", search: search.trim(), count: matchingTotal }
         : { kind: "accounts", accountKeys: [...selected] },
     );
   }
@@ -321,11 +316,11 @@ export function AccountsPage() {
             </div>
           )}
         </div>
-        {pageAllSelected && learnerTotal > pageLearners.length && (
+        {pageAllSelected && matchingTotal > pageRows.length && (
           <div className="bg-muted border-border border-b px-4 py-2 text-sm">
             {allMatching ? (
               <>
-                All {learnerTotal.toLocaleString()} learners
+                All {matchingTotal.toLocaleString()} accounts
                 {search.trim() ? ` matching "${search.trim()}"` : ""} are selected.{" "}
                 <button
                   type="button"
@@ -337,13 +332,13 @@ export function AccountsPage() {
               </>
             ) : (
               <>
-                All {pageLearners.length} learners on this page are selected.{" "}
+                All {pageRows.length} accounts on this page are selected.{" "}
                 <button
                   type="button"
                   className="text-link hover:underline"
                   onClick={() => setAllMatching(true)}
                 >
-                  Select all {learnerTotal.toLocaleString()} learners
+                  Select all {matchingTotal.toLocaleString()} accounts
                   {search.trim() ? ` matching "${search.trim()}"` : ""}
                 </button>
               </>
@@ -356,9 +351,9 @@ export function AccountsPage() {
               <TableHead className="w-10">
                 <input
                   type="checkbox"
-                  aria-label="Select every learner on this page"
+                  aria-label="Select every account on this page"
                   checked={pageAllSelected}
-                  disabled={pageLearners.length === 0}
+                  disabled={pageRows.length === 0}
                   onChange={togglePage}
                 />
               </TableHead>
@@ -378,14 +373,12 @@ export function AccountsPage() {
             {list.data?.items.map((u) => (
               <TableRow key={u.accountKey}>
                 <TableCell>
-                  {u.isLearner && (
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${u.name}`}
-                      checked={allMatching || selected.has(u.accountKey)}
-                      onChange={() => toggleRow(u.accountKey)}
-                    />
-                  )}
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${u.name}`}
+                    checked={allMatching || selected.has(u.accountKey)}
+                    onChange={() => toggleRow(u.accountKey)}
+                  />
                 </TableCell>
                 <TableCell>
                   <Link to={`/accounts/${u.accountKey}`} className="text-link hover:underline">
@@ -412,19 +405,17 @@ export function AccountsPage() {
                       <DropdownMenuItem asChild>
                         <Link to={`/accounts/${u.accountKey}`}>View details</Link>
                       </DropdownMenuItem>
-                      {u.isLearner && (
-                        <DropdownMenuItem
-                          onSelect={() =>
-                            setAssignTarget({
-                              kind: "accounts",
-                              accountKeys: [u.accountKey],
-                              name: u.name,
-                            })
-                          }
-                        >
-                          Assign courses
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem
+                        onSelect={() =>
+                          setAssignTarget({
+                            kind: "accounts",
+                            accountKeys: [u.accountKey],
+                            name: u.name,
+                          })
+                        }
+                      >
+                        Assign courses
+                      </DropdownMenuItem>
                       {u.isLearner && (
                         <DropdownMenuItem
                           onSelect={() =>

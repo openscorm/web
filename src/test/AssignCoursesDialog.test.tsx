@@ -35,7 +35,13 @@ beforeEach(() => {
       if (url.endsWith("/api/tenants/7/assignments") && init?.method === "POST") {
         posts.push(JSON.parse(String(init.body)));
         return Promise.resolve(
-          json({ assigned: 236, alreadyAssigned: 4, alreadyCompleted: 0, skippedDeactivated: 1 }),
+          json({
+            assigned: 236,
+            alreadyAssigned: 4,
+            alreadyCompleted: 0,
+            skippedDeactivated: 1,
+            emailsQueued: 118,
+          }),
         );
       }
       return Promise.reject(new Error(`unexpected fetch: ${url}`));
@@ -68,27 +74,48 @@ describe("AssignCoursesDialog", () => {
     const onAssigned = renderDialog({ kind: "accounts", accountKeys: [12, 13] });
     const user = userEvent.setup();
 
-    expect(screen.getByText("To 2 selected learners")).toBeInTheDocument();
+    expect(screen.getByText("To 2 selected people")).toBeInTheDocument();
     await user.click(await screen.findByLabelText("UK Export Control"));
     await user.click(screen.getByLabelText("US Export Control"));
     await user.click(screen.getByRole("button", { name: "Assign 2 courses" }));
 
-    await waitFor(() => expect(posts).toEqual([{ accountKeys: [12, 13], courseKeys: [3, 4] }]));
+    await waitFor(() =>
+      expect(posts).toEqual([{ accountKeys: [12, 13], courseKeys: [3, 4], notify: true }]),
+    );
     expect(await screen.findByText("236 new assignments")).toBeInTheDocument();
     expect(screen.getByText("4 already assigned")).toBeInTheDocument();
-    expect(screen.getByText("1 deactivated learner skipped")).toBeInTheDocument();
+    expect(screen.getByText("1 deactivated account skipped")).toBeInTheDocument();
+    expect(screen.getByText("Emailing 118 people about their new courses")).toBeInTheDocument();
     expect(onAssigned).toHaveBeenCalledOnce();
   });
 
-  it("sends the search for every learner matching it", async () => {
-    renderDialog({ kind: "search", search: " uk ", learnerCount: 120 });
+  // The email is on by default; unticking it stages the assignment quietly.
+  it("sends no email when the box is unticked", async () => {
+    renderDialog({ kind: "accounts", accountKeys: [12], name: "Ann Lee" });
     const user = userEvent.setup();
 
-    expect(screen.getByText('To all 120 learners matching "uk"')).toBeInTheDocument();
+    expect(screen.getByLabelText("Email learners about their new courses")).toBeChecked();
+    await user.click(screen.getByLabelText("Email learners about their new courses"));
     await user.click(await screen.findByLabelText("UK Export Control"));
     await user.click(screen.getByRole("button", { name: "Assign 1 course" }));
 
-    await waitFor(() => expect(posts).toEqual([{ learnerSearch: "uk", courseKeys: [3] }]));
+    await waitFor(() =>
+      expect(posts).toEqual([{ accountKeys: [12], courseKeys: [3], notify: false }]),
+    );
+    expect(await screen.findByText("No emails sent")).toBeInTheDocument();
+  });
+
+  it("sends the search for every learner matching it", async () => {
+    renderDialog({ kind: "search", search: " uk ", count: 120 });
+    const user = userEvent.setup();
+
+    expect(screen.getByText('To all 120 people matching "uk"')).toBeInTheDocument();
+    await user.click(await screen.findByLabelText("UK Export Control"));
+    await user.click(screen.getByRole("button", { name: "Assign 1 course" }));
+
+    await waitFor(() =>
+      expect(posts).toEqual([{ learnerSearch: "uk", courseKeys: [3], notify: true }]),
+    );
   });
 
   it("cannot assign until a course is picked", async () => {

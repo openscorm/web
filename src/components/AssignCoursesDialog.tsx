@@ -14,12 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Who an assignment goes to. "search" is the roster's select-all-matching: the
-// server resolves the search to learners itself, because the roster pages and
-// a large organization has thousands of them.
+// Who an assignment goes to: any active account, managers included, since
+// managers take courses too. "search" is the roster's select-all-matching: the
+// server resolves the search itself, because the roster pages and a large
+// organization has thousands of people.
 export type AssignTarget =
   | { kind: "accounts"; accountKeys: number[]; name?: string }
-  | { kind: "search"; search: string; learnerCount: number };
+  | { kind: "search"; search: string; count: number };
 
 interface LibraryCourse {
   courseKey: number;
@@ -32,6 +33,8 @@ interface AssignResult {
   alreadyAssigned: number;
   alreadyCompleted: number;
   skippedDeactivated: number;
+  // One per person with something new, however many courses that was.
+  emailsQueued: number;
 }
 
 // Past this many courses the list gets a filter box.
@@ -43,26 +46,29 @@ function plural(n: number, one: string, many: string) {
 
 function audience(target: AssignTarget): string {
   if (target.kind === "search") {
-    const learners = plural(target.learnerCount, "learner", "learners");
+    const people = plural(target.count, "person", "people");
     return target.search.trim()
-      ? `To all ${learners} matching "${target.search.trim()}"`
-      : `To all ${learners} in your organization`;
+      ? `To all ${people} matching "${target.search.trim()}"`
+      : `To all ${people} in your organization`;
   }
   if (target.accountKeys.length === 1 && target.name) return `To ${target.name}`;
-  return `To ${plural(target.accountKeys.length, "selected learner", "selected learners")}`;
+  return `To ${plural(target.accountKeys.length, "selected person", "selected people")}`;
 }
 
-// The counts are learner and course pairs, except deactivated learners, which
+// The counts are person and course pairs, except deactivated accounts, which
 // are counted once each however many courses were picked.
-function summary(r: AssignResult): string[] {
+function summary(r: AssignResult, notify: boolean): string[] {
   const lines = [plural(r.assigned, "new assignment", "new assignments")];
   if (r.alreadyAssigned > 0) lines.push(`${r.alreadyAssigned.toLocaleString()} already assigned`);
   if (r.alreadyCompleted > 0)
     lines.push(`${r.alreadyCompleted.toLocaleString()} already completed, left as they were`);
   if (r.skippedDeactivated > 0)
     lines.push(
-      `${plural(r.skippedDeactivated, "deactivated learner", "deactivated learners")} skipped`,
+      `${plural(r.skippedDeactivated, "deactivated account", "deactivated accounts")} skipped`,
     );
+  if (!notify) lines.push("No emails sent");
+  else if (r.emailsQueued > 0)
+    lines.push(`Emailing ${plural(r.emailsQueued, "person", "people")} about their new courses`);
   return lines;
 }
 
@@ -83,6 +89,9 @@ export function AssignCoursesDialog({
   const [chosen, setChosen] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AssignResult | null>(null);
+  // On by default: an assignment nobody hears about leaves the manager to
+  // email everyone by hand. Untick it to stage assignments quietly.
+  const [notify, setNotify] = useState(true);
 
   // The same query the library reads, so an open library page and this
   // dialog share one fetch.
@@ -97,8 +106,8 @@ export function AssignCoursesDialog({
       const courseKeys = [...chosen];
       const body =
         target?.kind === "search"
-          ? { learnerSearch: target.search.trim(), courseKeys }
-          : { accountKeys: target?.accountKeys ?? [], courseKeys };
+          ? { learnerSearch: target.search.trim(), courseKeys, notify }
+          : { accountKeys: target?.accountKeys ?? [], courseKeys, notify };
       return api<AssignResult>(`/api/tenants/${tenantKey}/assignments`, {
         method: "POST",
         body: JSON.stringify(body),
@@ -124,6 +133,7 @@ export function AssignCoursesDialog({
     setChosen(new Set());
     setError(null);
     setResult(null);
+    setNotify(true);
     assign.reset();
     onClose();
   }
@@ -157,7 +167,7 @@ export function AssignCoursesDialog({
 
         {result ? (
           <ul className="list-disc space-y-1 pl-5 text-sm">
-            {summary(result).map((line) => (
+            {summary(result, notify).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
@@ -213,9 +223,19 @@ export function AssignCoursesDialog({
                 ))}
               </div>
             </fieldset>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={notify}
+                onChange={(e) => setNotify(e.target.checked)}
+              />
+              <span>Email learners about their new courses</span>
+            </label>
             <p className="text-muted-foreground text-xs">
-              A course a learner already completed is left as it is. Until they open it, an assigned
-              course shows in Reports as Not started.
+              One email per person, listing every course new to them. Someone who has never set a
+              password gets their invitation with the courses in it. A course a learner already
+              completed is left as it is, and nobody is emailed about a course they already had.
             </p>
           </div>
         )}
