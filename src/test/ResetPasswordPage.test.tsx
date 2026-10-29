@@ -13,14 +13,28 @@ import { ResetPasswordPage } from "@/routes/ResetPasswordPage";
 
 let bodies: unknown[];
 let completeStatus: number;
+let checks: unknown[];
+let checkState: string | null;
 
 beforeEach(() => {
   bodies = [];
   completeStatus = 204;
+  checks = [];
+  checkState = "valid";
   vi.stubGlobal(
     "fetch",
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url.endsWith("/api/auth/password-reset/check")) {
+        checks.push(JSON.parse(String(init?.body)));
+        if (checkState === null) return Promise.resolve(new Response(null, { status: 503 }));
+        return Promise.resolve(
+          new Response(JSON.stringify({ state: checkState }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
       if (url.endsWith("/api/auth/password-reset/complete")) {
         bodies.push(JSON.parse(String(init?.body)));
         if (completeStatus === 410)
@@ -89,6 +103,54 @@ describe("ResetPasswordPage", () => {
       token: "s3cret",
       password: "a-new-password-1",
     });
+    expect(checks).toEqual([]);
+  });
+
+  // A resent invitation retires the link before it. Someone opening the old
+  // one is told at once, before typing a password into a form that will
+  // refuse it.
+  it("says at once that an invitation link was replaced by a newer one", async () => {
+    checkState = "replaced";
+    renderAt("/welcome?token=0123456789abcdef0123456789abcdef.s3cret");
+
+    expect(
+      await screen.findByRole("heading", { name: "This invitation link has been replaced" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request a new link" })).toHaveAttribute(
+      "href",
+      "/forgot",
+    );
+    expect(checks).toEqual([{ token: "0123456789abcdef0123456789abcdef.s3cret" }]);
+  });
+
+  it("sends someone whose invitation already set a password to sign in", async () => {
+    checkState = "used";
+    renderAt("/welcome?token=0123456789abcdef0123456789abcdef.s3cret");
+
+    expect(
+      await screen.findByRole("heading", { name: "Your password is already set" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to sign in" })).toHaveAttribute("href", "/login");
+  });
+
+  it("says at once that a reset link has expired", async () => {
+    checkState = "expired";
+    renderAt("/reset?token=0123456789abcdef0123456789abcdef.s3cret");
+
+    expect(
+      await screen.findByRole("heading", { name: "This reset link has expired" }),
+    ).toBeInTheDocument();
+  });
+
+  // The check is a courtesy; if it fails, submitting still checks the link.
+  it("keeps the form when the check itself fails", async () => {
+    checkState = null;
+    renderAt("/reset?token=0123456789abcdef0123456789abcdef.s3cret");
+
+    await waitFor(() => expect(checks).toHaveLength(1));
+    await submit();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
   });
 
   it("calls a link with no token invalid", () => {

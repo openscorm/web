@@ -45,6 +45,8 @@ function row(key: number, name: string) {
     isLearner: true,
     isOperator: false,
     createdAt: "2026-09-06T14:00:00Z",
+    // Ann Lee has not set a password yet; everyone else has.
+    canSignIn: name !== "Ann Lee",
   };
 }
 
@@ -63,6 +65,14 @@ beforeEach(() => {
         return Promise.resolve(
           json([{ courseKey: 3, courseSlug: "uk-export", title: "UK Export Control" }]),
         );
+      if (url.endsWith("/api/tenants/7/accounts") && init?.method === "POST") {
+        posts.push(JSON.parse(String(init.body)));
+        return Promise.resolve(json({ accountKey: 99 }));
+      }
+      if (url.endsWith("/invitation") && init?.method === "POST") {
+        posts.push(url);
+        return Promise.resolve(new Response(null, { status: 202 }));
+      }
       if (url.endsWith("/api/tenants/7/assignments") && init?.method === "POST") {
         posts.push(JSON.parse(String(init.body)));
         return Promise.resolve(
@@ -157,6 +167,55 @@ describe("AccountsPage roster", () => {
     );
     expect(await screen.findByText("1-1 of 1")).toBeInTheDocument();
     expect(screen.queryByText("Zed Young")).not.toBeInTheDocument();
+  });
+});
+
+describe("AccountsPage invitations", () => {
+  it("invites a new learner by default and not a manager-only account", async () => {
+    renderPage();
+    const user = userEvent.setup();
+    await screen.findByText("Ann Lee");
+
+    expect(screen.getByLabelText("Email an invitation to set a password")).toBeChecked();
+    await user.type(screen.getByLabelText("Name"), "New Starter");
+    await user.type(screen.getByLabelText("Email"), "new@acme.test");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({ isLearner: true, invite: true });
+    expect(
+      await screen.findByText(
+        "Account created. An invitation to set a password is on its way to new@acme.test.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Name"), "New Manager");
+    await user.type(screen.getByLabelText("Email"), "boss@acme.test");
+    await user.click(screen.getByLabelText("Manager"));
+    await user.click(screen.getByLabelText("Learner"));
+    expect(screen.getByLabelText("Email an invitation to set a password")).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+
+    await waitFor(() => expect(posts).toHaveLength(2));
+    expect(posts[1]).toMatchObject({ isManager: true, isLearner: false, invite: false });
+  });
+
+  it("offers a resend only to someone who cannot sign in yet", async () => {
+    renderPage();
+    const user = userEvent.setup();
+    await screen.findByText("Ann Lee");
+
+    await user.click(screen.getByRole("button", { name: "Actions for Person 2" }));
+    expect(screen.queryByRole("menuitem", { name: "Resend invitation" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Actions for Ann Lee" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Resend invitation" }));
+
+    await waitFor(() => expect(posts).toEqual(["/api/tenants/7/accounts/1/invitation"]));
+    expect(
+      await screen.findByText("A new invitation is on its way to ann.lee@acme.test."),
+    ).toBeInTheDocument();
   });
 });
 

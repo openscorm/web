@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/lib/api";
@@ -40,6 +40,11 @@ const COPY = {
     expiredTitle: "This reset link has expired",
     expiredBody: "Request a new one and we'll email it to you.",
     expiredAction: "Request a new link",
+    replacedTitle: "This reset link has been replaced",
+    replacedBody:
+      "A newer link was sent to you. Use the one in the most recent email, or request a new one.",
+    usedTitle: "This reset link has already been used",
+    usedBody: "Your password was changed with it. Sign in with your new password.",
     heading: "Set new password",
     intro: null,
     done: "Password updated. Sign in with your new password.",
@@ -56,6 +61,11 @@ const COPY = {
     expiredTitle: "This invitation link has expired",
     expiredBody: "Request a new one and we'll email it to you.",
     expiredAction: "Request a new link",
+    replacedTitle: "This invitation link has been replaced",
+    replacedBody:
+      "A newer invitation was sent to you. Use the link in the most recent email, or request a new one and we'll email it to you.",
+    usedTitle: "Your password is already set",
+    usedBody: "This invitation has been used. Sign in to see your courses.",
     heading: "Set up your account",
     intro:
       "Your organization has added you to OpenSCORM. Choose a password to sign in and see your courses.",
@@ -67,21 +77,35 @@ const COPY = {
   },
 } as const;
 
-// A link the page cannot use: missing its token, or run out. Either way the
-// way forward is a new one.
-function LinkProblem({ title, body, action }: { title: string; body: string; action: string }) {
+// A link the page cannot use: missing its token, run out, or replaced by a
+// newer one, where the way forward is a new link; or already used, where it is
+// signing in.
+function LinkProblem({
+  title,
+  body,
+  action,
+  to = "/forgot",
+}: {
+  title: string;
+  body: string;
+  action: string;
+  to?: string;
+}) {
   return (
     <LobbyLayout>
       <div className="bg-card text-card-foreground border-border w-full max-w-md rounded-xl border p-8 shadow-sm">
         <h1 className="mb-2 text-2xl font-bold tracking-tight">{title}</h1>
         <p className="text-muted-foreground mb-6 text-sm">{body}</p>
-        <Link to="/forgot" className="text-link text-sm hover:underline">
+        <Link to={to} className="text-link text-sm hover:underline">
           {action}
         </Link>
       </div>
     </LobbyLayout>
   );
 }
+
+// What the server says the link is when the page loads.
+type LinkState = "valid" | "invalid" | "expired" | "replaced" | "used";
 
 // The reset URL is emailed as
 //   https://app.openscorm.com/reset?token=<id>.<secret>
@@ -106,6 +130,26 @@ export function ResetPasswordPage({ variant = "reset" }: { variant?: "reset" | "
     resolver: zodResolver(schema),
     defaultValues: { password: "", confirm: "" },
   });
+
+  // Checked as the page loads, so a link that ran out or was replaced by a
+  // resent invitation says so before anyone types a password into it. The
+  // form shows meanwhile, and stays if the check itself fails: submitting
+  // still checks the link. An older link carrying its login and email
+  // expired long ago and is not checked.
+  const legacy = !!(email && login);
+  const check = useQuery({
+    queryKey: ["reset-link", token],
+    queryFn: () =>
+      api<{ state?: LinkState } | null>("/api/auth/password-reset/check", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      }),
+    enabled: !!token && !legacy,
+    retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+  const linkState = done ? "valid" : check.data?.state;
 
   const complete = useMutation({
     mutationFn: async (values: FormValues) =>
@@ -136,9 +180,31 @@ export function ResetPasswordPage({ variant = "reset" }: { variant?: "reset" | "
     );
   }
 
-  if (expired) {
+  if (expired || linkState === "expired") {
     return (
       <LinkProblem title={copy.expiredTitle} body={copy.expiredBody} action={copy.expiredAction} />
+    );
+  }
+
+  if (linkState === "replaced") {
+    return (
+      <LinkProblem
+        title={copy.replacedTitle}
+        body={copy.replacedBody}
+        action={copy.expiredAction}
+      />
+    );
+  }
+
+  if (linkState === "used") {
+    return (
+      <LinkProblem title={copy.usedTitle} body={copy.usedBody} action="Go to sign in" to="/login" />
+    );
+  }
+
+  if (linkState === "invalid") {
+    return (
+      <LinkProblem title={copy.invalidTitle} body={copy.invalidBody} action={copy.invalidAction} />
     );
   }
 

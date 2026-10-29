@@ -63,10 +63,12 @@ function counts(overrides: Partial<ImportResponse["counts"]> = {}): ImportRespon
 }
 
 let calls: string[];
+let committed: FormData[];
 let previewBody: ImportResponse;
 
 beforeEach(() => {
   calls = [];
+  committed = [];
   previewBody = {
     capacity: {
       limited: false,
@@ -84,7 +86,7 @@ beforeEach(() => {
   };
   vi.stubGlobal(
     "fetch",
-    vi.fn((input: RequestInfo | URL) => {
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       calls.push(url);
       const json = (body: unknown) =>
@@ -94,13 +96,23 @@ beforeEach(() => {
             headers: { "content-type": "application/json" },
           }),
         );
+      if (url.endsWith("/api/tenants/7/courses"))
+        return json([
+          { courseKey: 3, courseSlug: "uk-export", title: "UK Export Control" },
+          { courseKey: 4, courseSlug: "gdpr", title: "Data Protection" },
+        ]);
       if (url.endsWith("/accounts/import/preview")) return json(previewBody);
       if (url.endsWith("/accounts/import")) {
+        const form = init?.body as FormData;
+        committed.push(form);
         return json({
           ...previewBody,
           counts: counts({ created: 2, invalid: 1, existing: 1 }),
           rows: rows.map((r) => (r.status === "ready" ? { ...r, status: "created" } : r)),
           resultsCsv: "Line,First name\r\n",
+          assignment: form.has("courseKeys")
+            ? { assigned: 6, alreadyAssigned: 0, alreadyCompleted: 0, existingNotified: 1 }
+            : null,
         });
       }
       return json(null);
@@ -152,6 +164,46 @@ describe("LearnerImportCard", () => {
     expect(await screen.findByText(/2 learners were added and invited\./)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download results" })).toBeInTheDocument();
     expect(calls.filter((u) => u.endsWith("/api/tenants/7/accounts/import"))).toHaveLength(1);
+    expect(committed[0].has("courseKeys")).toBe(false);
+  });
+
+  // The courses go to everyone in the file, and each person gets one email:
+  // a new learner's invitation lists them.
+  it("sends the courses picked at the confirm step with the import", async () => {
+    renderCard();
+    const user = await checkFile();
+
+    await user.click(await screen.findByLabelText("UK Export Control"));
+    await user.click(screen.getByLabelText("Data Protection"));
+    expect(screen.getByLabelText("Email learners about their new courses")).toBeChecked();
+    await user.click(
+      screen.getByRole("button", { name: "Import 2 learners and assign 2 courses" }),
+    );
+
+    expect(await screen.findByText("6 new assignments")).toBeInTheDocument();
+    expect(
+      screen.getByText("Each new learner's invitation lists their courses"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Emailing 1 person already in your organization about their new courses"),
+    ).toBeInTheDocument();
+    expect(committed[0].getAll("courseKeys")).toEqual(["3", "4"]);
+    expect(committed[0].get("notify")).toBe("true");
+  });
+
+  it("can carry courses to a file of people who are all here already", async () => {
+    previewBody.capacity = { ...previewBody.capacity, ready: 0 };
+    previewBody.counts = counts({ existing: 1 });
+    renderCard();
+    const user = await checkFile();
+
+    expect(await screen.findByRole("button", { name: "Import 0 learners" })).toBeDisabled();
+    await user.click(await screen.findByLabelText("UK Export Control"));
+    await user.click(screen.getByLabelText("Email learners about their new courses"));
+    await user.click(screen.getByRole("button", { name: "Assign 1 course" }));
+
+    expect(await screen.findByText("No course emails sent")).toBeInTheDocument();
+    expect(committed[0].get("notify")).toBe("false");
   });
 
   it("says how many fit when the plan is full, and imports only those", async () => {

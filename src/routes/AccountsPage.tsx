@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,6 +37,9 @@ interface AccountRow {
   isLearner: boolean;
   isOperator: boolean;
   createdAt: string;
+  // False until they have a password of their own; until then the row
+  // offers to resend their invitation.
+  canSignIn: boolean;
 }
 
 // The roster is paged and searchable server-side, the same
@@ -57,6 +60,7 @@ const createSchema = z
     email: z.string().min(1, "Email is required.").email("Enter a valid email."),
     isManager: z.boolean(),
     isLearner: z.boolean(),
+    invite: z.boolean(),
   })
   .refine((v) => v.isManager || v.isLearner, {
     path: ["isLearner"],
@@ -108,10 +112,23 @@ export function AccountsPage() {
     staleTime: Infinity,
   });
 
-  const { register, handleSubmit, reset, formState } = useForm<CreateFormValues>({
+  const { register, handleSubmit, reset, formState, watch, setValue } = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: "", email: "", isManager: false, isLearner: true },
+    defaultValues: { name: "", email: "", isManager: false, isLearner: true, invite: true },
   });
+
+  // A new account's password is random and never shown, so without the
+  // invitation nobody can sign in to it. Ticked for a learner; not for a
+  // manager-only account, since the invitation talks about courses. Once the
+  // box has been clicked, it stays as set.
+  const isLearner = watch("isLearner");
+  const inviteTouched = !!formState.dirtyFields.invite;
+  useEffect(() => {
+    if (!inviteTouched) setValue("invite", isLearner);
+  }, [isLearner, inviteTouched, setValue]);
+
+  // What the last add or resend did; one line, replaced by the next.
+  const [notice, setNotice] = useState<{ text: string; failed?: boolean } | null>(null);
 
   const create = useMutation({
     mutationFn: async (values: CreateFormValues) =>
@@ -119,12 +136,18 @@ export function AccountsPage() {
         method: "POST",
         body: JSON.stringify(values),
       }),
-    onSuccess: async () => {
+    onSuccess: async (_, values) => {
       setServerError(null);
+      setNotice({
+        text: values.invite
+          ? `Account created. An invitation to set a password is on its way to ${values.email}.`
+          : "Account created.",
+      });
       reset();
       await qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "users"] });
     },
     onError: (err) => {
+      setNotice(null);
       if (err instanceof ApiError && err.problem) {
         const p = err.problem as ProblemResponse;
         setServerError(p.detail ?? p.title ?? "Create failed.");
@@ -150,6 +173,20 @@ export function AccountsPage() {
       setPendingAction(null);
       await qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "users"] });
     },
+  });
+
+  // A fresh link for someone whose invitation ran out (they last seven days)
+  // or went astray. It replaces the link before it.
+  const resend = useMutation({
+    mutationFn: async (u: AccountRow) => {
+      await api<void>(`/api/tenants/${tenantKey}/accounts/${u.accountKey}/invitation`, {
+        method: "POST",
+      });
+      return u;
+    },
+    onMutate: () => setNotice(null),
+    onSuccess: (u) => setNotice({ text: `A new invitation is on its way to ${u.email}.` }),
+    onError: () => setNotice({ text: "Could not send the invitation. Try again.", failed: true }),
   });
 
   const pageRows = list.data?.items ?? [];
@@ -225,6 +262,19 @@ export function AccountsPage() {
         ]}
       />
 
+      {notice && (
+        <div
+          role={notice.failed ? "alert" : "status"}
+          className={
+            notice.failed
+              ? "mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+              : "mb-6 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200"
+          }
+        >
+          {notice.text}
+        </div>
+      )}
+
       <Card className="mb-6 p-6">
         <h2 className="mb-4 text-lg font-semibold">Add account</h2>
         {serverError && (
@@ -275,6 +325,9 @@ export function AccountsPage() {
               </p>
             )}
           </div>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" {...register("invite")} /> Email an invitation to set a password
+          </label>
           <div className="sm:col-span-2">
             <Button type="submit" disabled={create.isPending}>
               {create.isPending ? "Creating…" : "Create account"}
@@ -416,6 +469,11 @@ export function AccountsPage() {
                       >
                         Assign courses
                       </DropdownMenuItem>
+                      {!u.canSignIn && (
+                        <DropdownMenuItem onSelect={() => resend.mutate(u)}>
+                          Resend invitation
+                        </DropdownMenuItem>
+                      )}
                       {u.isLearner && (
                         <DropdownMenuItem
                           onSelect={() =>

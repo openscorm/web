@@ -7,6 +7,7 @@ import type { ProblemResponse } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { CoursePicker } from "@/components/CoursePicker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/Table";
 
 // The roster's CSV import. Choose a file, see what happens to every row, then
@@ -40,6 +41,15 @@ export interface ImportResponse {
   counts: Record<ImportRow["status"], number>;
   rows: ImportRow[];
   resultsCsv: string | null;
+  // What the courses picked at the confirm step did; null when none were.
+  // existingNotified is the people already in the organization emailed about
+  // new courses; a new learner's courses ride in their invitation.
+  assignment?: {
+    assigned: number;
+    alreadyAssigned: number;
+    alreadyCompleted: number;
+    existingNotified: number;
+  } | null;
 }
 
 const STATUS_LABEL: Record<ImportRow["status"], string> = {
@@ -159,6 +169,28 @@ function MeteredCapNote({
   );
 }
 
+// The counts are person and course pairs, as in the assign dialog.
+function assignmentLines(
+  a: NonNullable<ImportResponse["assignment"]>,
+  created: number,
+  notify: boolean,
+): string[] {
+  const lines = [plural(a.assigned, "new assignment", "new assignments")];
+  if (a.alreadyAssigned > 0) lines.push(`${a.alreadyAssigned.toLocaleString()} already assigned`);
+  if (a.alreadyCompleted > 0)
+    lines.push(`${a.alreadyCompleted.toLocaleString()} already completed, left as they were`);
+  if (!notify) {
+    lines.push("No course emails sent");
+  } else {
+    if (created > 0) lines.push("Each new learner's invitation lists their courses");
+    if (a.existingNotified > 0)
+      lines.push(
+        `Emailing ${plural(a.existingNotified, "person", "people")} already in your organization about their new courses`,
+      );
+  }
+  return lines;
+}
+
 function CapacityNote({ capacity }: { capacity: ImportResponse["capacity"] }) {
   if (capacity.metered && capacity.cap != null && capacity.active != null) {
     return (
@@ -202,10 +234,18 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Courses picked at the confirm step go to everyone in the file, new or
+  // already here. The email is on by default, as in the assign dialog.
+  const [chosen, setChosen] = useState<Set<number>>(new Set());
+  const [notify, setNotify] = useState(true);
 
-  const send = (path: string) => {
+  const send = (path: string, withCourses = false) => {
     const body = new FormData();
     body.append("file", file!);
+    if (withCourses && chosen.size > 0) {
+      chosen.forEach((courseKey) => body.append("courseKeys", String(courseKey)));
+      body.append("notify", String(notify));
+    }
     return api<ImportResponse>(`/api/tenants/${tenantKey}/accounts/import${path}`, {
       method: "POST",
       body,
@@ -219,10 +259,14 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
   });
 
   const commit = useMutation({
-    mutationFn: () => send(""),
+    mutationFn: () => send("", true),
     onMutate: () => setError(null),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "users"] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "users"] }),
+        qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "assignments"] }),
+        qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "reports"] }),
+      ]);
     },
     onError: (err) => setError(problemText(err, "The import failed.")),
   });
@@ -230,10 +274,21 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
   const startOver = () => {
     setFile(null);
     setError(null);
+    setChosen(new Set());
+    setNotify(true);
     preview.reset();
     commit.reset();
     if (input.current) input.current.value = "";
   };
+
+  function toggle(courseKey: number) {
+    setChosen((prev) => {
+      const next = new Set(prev);
+      if (next.has(courseKey)) next.delete(courseKey);
+      else next.add(courseKey);
+      return next;
+    });
+  }
 
   const result = commit.data;
   const plan = preview.data;
@@ -242,6 +297,15 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
       ? Math.min(plan.capacity.ready, plan.capacity.headroom ?? 0)
       : plan.capacity.ready
     : 0;
+  // A file of people who are all here already can still carry courses to them.
+  const existing = plan?.counts.existing ?? 0;
+  const canConfirm = importable > 0 || (chosen.size > 0 && existing > 0);
+  const confirmLabel =
+    importable === 0 && chosen.size > 0
+      ? `Assign ${plural(chosen.size, "course", "courses")}`
+      : chosen.size > 0
+        ? `Import ${plural(importable, "learner", "learners")} and assign ${plural(chosen.size, "course", "courses")}`
+        : `Import ${plural(importable, "learner", "learners")}`;
 
   return (
     <Card className="mb-6 p-6">
@@ -262,7 +326,8 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
       </div>
       <p className="text-muted-foreground mb-4 text-sm">
         A CSV with First name, Last name and Email columns, up to 2,000 learners. Each new learner
-        is emailed an invitation to set a password. Anyone already in your organization is skipped.
+        is emailed an invitation to set a password. Anyone already in your organization is not added
+        again. Before you import, you can pick courses for everyone in the file.
       </p>
 
       {error && (
@@ -281,6 +346,13 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
             {result.counts.over_capacity > 0 &&
               ` ${plural(result.counts.over_capacity, "learner was", "learners were")} not added because the plan is full.`}
           </p>
+          {result.assignment && (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+              {assignmentLines(result.assignment, result.counts.created, notify).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
           <ProblemRows rows={result.rows} />
           <div className="mt-4 flex gap-2">
             <Button
@@ -299,17 +371,42 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
           <p className="text-sm">
             {plural(plan.capacity.ready, "learner is", "learners are")} ready to import.
             {plan.counts.existing + plan.counts.deactivated > 0 &&
-              ` ${plural(plan.counts.existing + plan.counts.deactivated, "is", "are")} already in your organization and will be skipped.`}
+              ` ${plural(plan.counts.existing + plan.counts.deactivated, "is", "are")} already in your organization and will not be added again.`}
             {plan.counts.invalid + plan.counts.duplicate > 0 &&
               ` ${plural(plan.counts.invalid + plan.counts.duplicate, "line needs", "lines need")} fixing and will be skipped.`}
           </p>
           <CapacityNote capacity={plan.capacity} />
           <ProblemRows rows={plan.rows} />
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold">Assign courses</h3>
+            <p className="text-muted-foreground mb-3 text-xs">
+              Optional. The courses you pick go to everyone in the file, new learners and people
+              already in your organization
+            </p>
+            <CoursePicker tenantKey={tenantKey} chosen={chosen} onToggle={toggle} />
+            {chosen.size > 0 && (
+              <>
+                <label className="mt-3 flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={notify}
+                    onChange={(e) => setNotify(e.target.checked)}
+                  />
+                  <span>Email learners about their new courses</span>
+                </label>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  A new learner gets one email: their invitation, listing the courses. Someone
+                  already in your organization gets one email about the courses new to them. Untick
+                  to add the courses without telling anyone; new learners still get their
+                  invitation.
+                </p>
+              </>
+            )}
+          </div>
           <div className="mt-4 flex gap-2">
-            <Button onClick={() => commit.mutate()} disabled={importable === 0 || commit.isPending}>
-              {commit.isPending
-                ? "Importing…"
-                : `Import ${plural(importable, "learner", "learners")}`}
+            <Button onClick={() => commit.mutate()} disabled={!canConfirm || commit.isPending}>
+              {commit.isPending ? "Importing…" : confirmLabel}
             </Button>
             <Button variant="ghost" onClick={startOver} disabled={commit.isPending}>
               Cancel

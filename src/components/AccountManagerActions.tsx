@@ -36,6 +36,8 @@ interface AccountManagerActionsProps {
   isActive: boolean;
   isManager: boolean;
   isLearner: boolean;
+  /** False until they have a password of their own; until then an invitation can be resent. */
+  canSignIn: boolean;
   /** Ran after a successful change, for whatever the host page caches. */
   onChanged?: () => void | Promise<void>;
 }
@@ -78,12 +80,14 @@ export function AccountManagerActions({
   isActive,
   isManager,
   isLearner,
+  canSignIn,
   onChanged,
 }: AccountManagerActionsProps) {
   const { user } = useAuth();
 
   const [editOpen, setEditOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -122,6 +126,18 @@ export function AccountManagerActions({
     onError: (error) => setServerError(problemText(error, "Could not reactivate this account.")),
   });
 
+  // An invitation link lasts seven days. A new one replaces the one before.
+  const resend = useMutation({
+    mutationFn: async () =>
+      api<void>(`/api/tenants/${tenantKey}/accounts/${accountKey}/invitation`, { method: "POST" }),
+    onMutate: () => {
+      setServerError(null);
+      setSentTo(null);
+    },
+    onSuccess: () => setSentTo(email),
+    onError: (error) => setServerError(problemText(error, "Could not send the invitation.")),
+  });
+
   // The endpoints require manager or operator, so rendering these to a learner
   // only offers a guaranteed 403.
   if (!user?.isManager && !user?.isOperator) return null;
@@ -151,11 +167,26 @@ export function AccountManagerActions({
             {reactivate.isPending ? "Reactivating…" : "Reactivate"}
           </button>
         )}
+        {isActive && !canSignIn && (
+          <button
+            type="button"
+            disabled={resend.isPending}
+            onClick={() => resend.mutate()}
+            className="border-border hover:bg-muted rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50"
+          >
+            {resend.isPending ? "Sending…" : "Resend invitation"}
+          </button>
+        )}
       </div>
 
       {serverError && !editOpen && (
         <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
           {serverError}
+        </p>
+      )}
+      {sentTo && (
+        <p role="status" className="text-muted-foreground mt-2 text-sm">
+          A new invitation is on its way to {sentTo}.
         </p>
       )}
 

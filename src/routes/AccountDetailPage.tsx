@@ -29,6 +29,7 @@ interface AccountDetail {
   authenticatedAt: string | null;
   passwordResetAt: string | null;
   passwordExpiresAt: string | null;
+  canSignIn: boolean;
 }
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -69,6 +70,7 @@ export function AccountDetailPage() {
               isActive={account.isActive}
               isManager={account.isManager}
               isLearner={account.isLearner}
+              canSignIn={account.canSignIn}
               onChanged={() =>
                 qc.invalidateQueries({ queryKey: ["accounts", tenantKey, accountKey] })
               }

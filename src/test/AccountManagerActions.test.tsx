@@ -39,6 +39,7 @@ const target = {
   isActive: true,
   isManager: false,
   isLearner: true,
+  canSignIn: true,
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -184,6 +185,24 @@ describe("AccountManagerActions", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0].method).toBe("POST");
     expect(calls[0].url).toContain("/api/tenants/42/accounts/7/reactivate");
+  });
+
+  // An invitation link lasts seven days, so someone who never set a password
+  // can be sent a fresh one; someone who has one is not offered it.
+  it("resends an invitation only to someone who cannot sign in yet", async () => {
+    const user = userEvent.setup();
+    renderActions(manager);
+    expect(screen.queryByRole("button", { name: "Resend invitation" })).toBeNull();
+
+    renderActions(manager, { canSignIn: false });
+    await user.click(await screen.findByRole("button", { name: "Resend invitation" }));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].url).toContain("/api/tenants/42/accounts/7/invitation");
+    expect(
+      await screen.findByText("A new invitation is on its way to lee@acme.test."),
+    ).toBeInTheDocument();
   });
 
   // The cap refusal's whole content is its sentence, and the older helper on
