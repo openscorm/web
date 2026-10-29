@@ -108,7 +108,13 @@ export function LearnerDetailPage() {
   const predatesTracking = (r: RecordRow) =>
     r.identitySource === IDENTITY_NOT_RECORDED &&
     trackedSince !== null &&
+    r.startedAt !== null &&
     new Date(r.startedAt) < new Date(trackedSince);
+
+  // As on Reports, the Assigned column appears only when there is something
+  // to put in it.
+  const hasAssignments = learner.records.some((r) => r.assignedAt !== null);
+  const columnCount = 8 + (hasAssignments ? 1 : 0);
 
   return (
     <AppShell align="left">
@@ -175,6 +181,7 @@ export function LearnerDetailPage() {
               <TableHead>Status</TableHead>
               <TableHead>Score</TableHead>
               <TableHead>Time spent</TableHead>
+              {hasAssignments && <TableHead>Assigned</TableHead>}
               <TableHead>Started</TableHead>
               <TableHead>Last activity</TableHead>
               <TableHead>Identity source</TableHead>
@@ -183,7 +190,7 @@ export function LearnerDetailPage() {
           </TableHeader>
           <TableBody>
             {learner.records.length === 0 && (
-              <TableStateRow colSpan={8}>No learning records yet</TableStateRow>
+              <TableStateRow colSpan={columnCount}>No learning records yet</TableStateRow>
             )}
             {learner.records.map((r) => (
               <TableRow key={r.enrollmentKey}>
@@ -198,8 +205,24 @@ export function LearnerDetailPage() {
                 </TableCell>
                 <TableCell className="font-mono">{r.score || "—"}</TableCell>
                 <TableCell className="font-mono">{r.duration || "—"}</TableCell>
+                {hasAssignments && (
+                  <TableCell>
+                    {r.assignedAt ? (
+                      <>
+                        <span className="text-muted-foreground font-mono text-xs">
+                          {formatDate(r.assignedAt)}
+                        </span>
+                        <div className="text-muted-foreground/70 text-xs">
+                          by {r.assignedByName}
+                        </div>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="text-muted-foreground font-mono text-xs">
-                  {formatDate(r.startedAt)}
+                  {r.startedAt ? formatDate(r.startedAt) : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
                   {formatDateTime(r.lastActivityAt)}

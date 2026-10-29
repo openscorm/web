@@ -12,12 +12,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TablePager } from "@/components/TablePager";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { RecordRow } from "@/lib/records";
-import { STATUS_OPTIONS } from "@/lib/records";
+import { ASSIGNMENT_STATUS_OPTIONS, STATUS_OPTIONS } from "@/lib/records";
 
 interface RecordsResponse {
   page: number;
   pageSize: number;
   total: number;
+  // Whether the organization has assigned any course, filters aside.
+  hasAssignments: boolean;
   records: RecordRow[];
 }
 
@@ -91,7 +93,13 @@ export function ReportsPage() {
   // Rows are one page of results, so a tenant with documents on page 1 and none
   // on page 2 would watch the column appear and disappear as they paged.
   const hasDocuments = (courses.data ?? []).some((c) => c.sourceType === "pdf");
-  const columnCount = 6 + (hasClients ? 1 : 0) + (hasDocuments ? 1 : 0);
+
+  // The same rule again for assignments: the Assigned column and the two
+  // assignment filters appear once the organization has assigned a course.
+  // The server answers it filters aside, so narrowing the list cannot hide it,
+  // and the previous page's answer holds while the next one loads.
+  const hasAssignments = list.data?.hasAssignments ?? false;
+  const columnCount = 6 + (hasClients ? 1 : 0) + (hasDocuments ? 1 : 0) + (hasAssignments ? 1 : 0);
 
   function applyFilter(setter: (value: string) => void) {
     return (value: string) => {
@@ -229,9 +237,15 @@ export function ReportsPage() {
                   className={inputClass}
                 >
                   <option value="">Any status</option>
+                  {hasAssignments &&
+                    ASSIGNMENT_STATUS_OPTIONS.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
                   {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
+                    <option key={s.value} value={s.value}>
+                      {s.label}
                     </option>
                   ))}
                 </select>
@@ -294,6 +308,7 @@ export function ReportsPage() {
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Score</th>
                     <th className="px-4 py-3 font-medium">Time spent</th>
+                    {hasAssignments && <th className="px-4 py-3 font-medium">Assigned</th>}
                     <th className="px-4 py-3 font-medium">Last activity</th>
                   </tr>
                 </thead>
@@ -345,6 +360,22 @@ export function ReportsPage() {
                       </td>
                       <td className="px-4 py-3 font-mono">{r.score || "—"}</td>
                       <td className="px-4 py-3 font-mono">{r.duration || "—"}</td>
+                      {hasAssignments && (
+                        <td className="px-4 py-3">
+                          {r.assignedAt ? (
+                            <>
+                              <span className="text-muted-foreground font-mono text-xs">
+                                {formatDate(r.assignedAt)}
+                              </span>
+                              <div className="text-muted-foreground/70 text-xs">
+                                by {r.assignedByName}
+                              </div>
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      )}
                       <td className="text-muted-foreground px-4 py-3 font-mono text-xs">
                         {formatDateTime(r.lastActivityAt)}
                       </td>

@@ -29,7 +29,9 @@ export interface RecordRow {
   // per-attempt history does not exist to count.
   saveCount: number;
 
-  startedAt: string;
+  // Null only for an assigned course the learner has not opened yet: when it
+  // was assigned is not when they started.
+  startedAt: string | null;
   lastActivityAt: string;
 
   // The revision of the policy document this record was taken
@@ -47,18 +49,33 @@ export interface RecordRow {
   // Whether the learner's email was verified when the record completed, or
   // now if it has not completed.
   emailVerified: boolean;
+
+  // When a manager assigned the course and who; both null for a record nobody
+  // assigned.
+  assignedAt: string | null;
+  assignedByName: string | null;
 }
 
 // The label the API uses for a record with no identity source.
 export const IDENTITY_NOT_RECORDED = "Not recorded";
 
 // SCORM 1.2 cmi.core.lesson_status carries completion and pass/fail in one
-// field, which is why a single Status filter covers both.
-export const STATUS_OPTIONS = [
-  "passed",
-  "failed",
-  "completed",
-  "incomplete",
-  "browsed",
-  "not attempted",
-] as const;
+// field, which is why a single Status filter covers both. Not started is the
+// stored launched status under the name the table shows for it.
+export const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "not_started", label: "Not started" },
+  { value: "passed", label: "passed" },
+  { value: "failed", label: "failed" },
+  { value: "completed", label: "completed" },
+  { value: "incomplete", label: "incomplete" },
+  { value: "browsed", label: "browsed" },
+  { value: "not attempted", label: "not attempted" },
+];
+
+// Offered once the organization has assigned a course: who was given a
+// course and has not started it, or has not finished it. Failed counts as
+// not finished.
+export const ASSIGNMENT_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "assigned_not_started", label: "Assigned, not started" },
+  { value: "assigned_not_completed", label: "Assigned, not completed" },
+];
