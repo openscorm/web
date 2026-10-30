@@ -42,9 +42,9 @@ const assignedRecord = {
   status: "Not started",
   score: "",
   duration: null,
-  saveCount: 1,
+  saveCount: 0,
   startedAt: null,
-  lastActivityAt: "2026-10-29T09:00:00+00:00",
+  lastActivityAt: null,
   documentVersion: null,
   sourceType: "package",
   identitySource: "Admin",
@@ -116,6 +116,9 @@ describe("Reports assignment columns and filters", () => {
     )!;
     expect(within(row).getByText("by Zara Manager")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Assigned" })).toBeInTheDocument();
+    // An assigned course nobody has opened has no last activity, rather than
+    // the moment it was assigned.
+    expect(within(row).getByText("Never")).toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText("Status"), "Assigned, not started");
 

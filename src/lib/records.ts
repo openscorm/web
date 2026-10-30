@@ -26,13 +26,14 @@ export interface RecordRow {
 
   // Commits of progress, not SCORM attempts. The API names it saveCount for
   // the same reason: cmi_result is last-value-wins per course+account, so
-  // per-attempt history does not exist to count.
+  // per-attempt history does not exist to count. 0 for an assigned course the
+  // learner has not opened yet.
   saveCount: number;
 
-  // Null only for an assigned course the learner has not opened yet: when it
-  // was assigned is not when they started.
+  // Both null only for an assigned course the learner has not opened yet: when
+  // it was assigned is neither when they started nor something they did.
   startedAt: string | null;
-  lastActivityAt: string;
+  lastActivityAt: string | null;
 
   // The revision of the policy document this record was taken
   // against, joined from the immutable course row. Null for a course that was
