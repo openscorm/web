@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
-import { api, ApiError } from "@/lib/api";
-import type { ProblemResponse } from "@/lib/types";
+import { api, describeApiError } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/page-header";
@@ -43,12 +42,7 @@ export function DispatchLockedPage() {
     onSuccess: (r) => {
       if (r.url) window.location.href = r.url;
     },
-    onError: (err) => {
-      if (err instanceof ApiError && err.problem) {
-        const p = err.problem as ProblemResponse;
-        setError(p.detail ?? p.title ?? "Checkout failed.");
-      } else setError("Checkout failed.");
-    },
+    onError: (err) => setError(describeApiError(err, "Checkout failed.")),
   });
 
   return (

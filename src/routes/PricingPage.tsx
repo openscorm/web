@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api, ApiError } from "@/lib/api";
-import type { ProblemResponse } from "@/lib/types";
+import { api, describeApiError } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useImpression } from "@/hooks/useImpression";
 import { AppShell } from "@/components/AppShell";
@@ -77,16 +76,6 @@ function perInterval(interval: "Monthly" | "Annual"): string {
   return interval === "Annual" ? "a year" : "a month";
 }
 
-// The API answers a refusal as a problem detail and the verification gate
-// as { code, message }; either way the server's sentence beats ours.
-function describe(err: unknown, fallback: string): string {
-  if (err instanceof ApiError && err.problem) {
-    const p = err.problem as ProblemResponse & { message?: string };
-    return p.detail ?? p.title ?? p.message ?? fallback;
-  }
-  return fallback;
-}
-
 const primaryBtn =
   "inline-flex items-center justify-center rounded-full py-2 px-4 font-semibold text-sm text-white bg-primary hover:bg-[color:var(--color-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(22_163_74)] focus-visible:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
 
@@ -131,12 +120,7 @@ export function PricingPage() {
     onSuccess: (r) => {
       if (r.url) window.location.href = r.url;
     },
-    onError: (err) => {
-      if (err instanceof ApiError && err.problem) {
-        const p = err.problem as ProblemResponse;
-        setError(p.detail ?? p.title ?? "Checkout failed.");
-      } else setError("Checkout failed.");
-    },
+    onError: (err) => setError(describeApiError(err, "Checkout failed.")),
   });
 
   const portal = useMutation({
@@ -148,12 +132,7 @@ export function PricingPage() {
     onSuccess: (r) => {
       if (r.url) window.location.href = r.url;
     },
-    onError: (err) => {
-      if (err instanceof ApiError && err.problem) {
-        const p = err.problem as ProblemResponse;
-        setError(p.detail ?? p.title ?? "Portal failed.");
-      } else setError("Portal failed.");
-    },
+    onError: (err) => setError(describeApiError(err, "Portal failed.")),
   });
 
   const preview = useMutation({
@@ -163,7 +142,7 @@ export function PricingPage() {
         body: JSON.stringify({ tenantKey, targetTier, interval }),
       }),
     onSuccess: (p, targetTier) => setPending({ tier: targetTier, preview: p }),
-    onError: (err) => setError(describe(err, "Could not price the change.")),
+    onError: (err) => setError(describeApiError(err, "Could not price the change.")),
   });
 
   const change = useMutation({
@@ -180,7 +159,7 @@ export function PricingPage() {
     },
     onError: (err) => {
       setPending(null);
-      setError(describe(err, "The plan change failed."));
+      setError(describeApiError(err, "The plan change failed."));
     },
   });
 

@@ -15,6 +15,18 @@ export class ApiError extends Error {
   }
 }
 
+// The server's own sentence for a failed call, or the caller's fallback. Most
+// refusals arrive as a problem detail, but the email verification gate on the
+// billing endpoints answers { code, message }, so read that too. Showing only
+// the fallback hides the one thing the person needs to know to get past it.
+export function describeApiError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.problem) {
+    const p = err.problem as { detail?: string; title?: string; message?: string };
+    return p.detail ?? p.title ?? p.message ?? fallback;
+  }
+  return fallback;
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
