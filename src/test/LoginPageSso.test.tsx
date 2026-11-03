@@ -210,6 +210,35 @@ describe("sign-in page single sign-on discovery", () => {
     await waitFor(() => expect(ssoButton()).toBeNull());
   });
 
+  // A person told by their invitation that there is no password to set can
+  // read the password box as a dead end, so the page says to start with the
+  // email, and stops saying it once the offer is on screen.
+  it("tells people to start with their email until single sign-on is offered", async () => {
+    const user = userEvent.setup();
+    mountPage("/api/auth/saml/contoso/login");
+
+    const hint = () => screen.queryByText(/enter your email first/i);
+    expect(hint()).not.toBeNull();
+    expect(screen.getByLabelText("Email").getAttribute("aria-describedby")).toBe("email-sso-hint");
+
+    await user.type(screen.getByLabelText("Email"), "zara@contoso.test");
+    await user.tab();
+    await waitFor(() => expect(ssoButton()).not.toBeNull());
+
+    expect(hint()).toBeNull();
+  });
+
+  it("keeps the hint for an address that is not federated", async () => {
+    const user = userEvent.setup();
+    mountPage(null);
+
+    await user.type(screen.getByLabelText("Email"), "someone@gmail.test");
+    await user.tab();
+    await waitFor(() => expect(discoverCalls).toHaveLength(1));
+
+    expect(screen.queryByText(/enter your email first/i)).not.toBeNull();
+  });
+
   it("does not ask about an address that cannot be federated", async () => {
     const user = userEvent.setup();
     mountPage("/api/auth/saml/contoso/login");

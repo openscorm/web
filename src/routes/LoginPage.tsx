@@ -339,12 +339,23 @@ export function LoginPage() {
                   type="email"
                   autoComplete="email"
                   autoFocus
+                  aria-describedby={ssoPath ? undefined : "email-sso-hint"}
                   className={inputClass}
                   {...register("email")}
                 />
                 {formState.errors.email && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                     {formState.errors.email.message}
+                  </p>
+                )}
+                {/* Single sign-on is offered only once an address is typed, so
+                    someone whose organization uses it, and who was told there
+                    is no password to set, needs to know to start with the
+                    email. Gone once the offer below appears. */}
+                {!ssoPath && (
+                  <p id="email-sso-hint" className="text-muted-foreground mt-1.5 text-xs">
+                    Signing in with your work account? Enter your email first and we'll show your
+                    organization's sign-in.
                   </p>
                 )}
               </div>
