@@ -7,7 +7,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/lib/api";
 import { slugify } from "@/lib/slug";
-import type { MeResponse, ProblemResponse } from "@/lib/types";
+import type { MeResponse, ProblemResponse, RegisterPendingResponse } from "@/lib/types";
 import { LobbyLayout } from "@/components/LobbyLayout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -40,6 +40,8 @@ export function RegisterPage() {
   // Portal name auto-fills from Organization name until the user edits it
   // directly; clearing the field hands control back to auto-fill.
   const [slugEdited, setSlugEdited] = useState(false);
+  // Set when sign-up answered "check your inbox" rather than with a session.
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const nav = useNavigate();
   const qc = useQueryClient();
   const [search] = useSearchParams();
@@ -66,11 +68,18 @@ export function RegisterPage() {
 
   const create = useMutation({
     mutationFn: async (values: RegisterBody) =>
-      api<MeResponse>("/api/auth/register", {
+      api<MeResponse | RegisterPendingResponse>("/api/auth/register", {
         method: "POST",
         body: JSON.stringify(values),
       }),
-    onSuccess: async () => {
+    onSuccess: async (result, values) => {
+      // An address that already has an account gets no session. The email
+      // says what it already has and offers the new organization, so this
+      // page names neither: anyone can type any address here.
+      if ("pending" in result && result.pending) {
+        setPendingEmail(values.email);
+        return;
+      }
       // account_created fires server-side from the register endpoint.
       // refetchType "all" for the same reason as LoginPage: no observer here.
       await qc.invalidateQueries({ queryKey: ["auth", "me"], refetchType: "all" });
@@ -87,6 +96,23 @@ export function RegisterPage() {
   });
 
   const slugPreview = watch("tenantHandle");
+
+  if (pendingEmail) {
+    return (
+      <LobbyLayout>
+        <div className="bg-card text-card-foreground border-border w-full max-w-lg rounded-xl border p-8 shadow-sm">
+          <h1 className="mb-4 text-3xl font-bold tracking-tight">Check your inbox</h1>
+          <p className="mb-4 text-[15px]">
+            We sent an email to <span className="font-medium break-all">{pendingEmail}</span>. Open
+            it to continue.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Nothing there after a few minutes? Check your spam folder.
+          </p>
+        </div>
+      </LobbyLayout>
+    );
+  }
 
   return (
     <LobbyLayout>

@@ -8,8 +8,15 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "@/lib/api";
 import { discoverSso, isDiscoverable } from "@/lib/sso";
 import { returnPathFrom } from "@/lib/returnPath";
-import type { LoginRequest, MeResponse, MfaSetupResponse, ProblemResponse } from "@/lib/types";
+import type {
+  LoginRequest,
+  MeResponse,
+  MfaSetupResponse,
+  OrganizationChoice,
+  ProblemResponse,
+} from "@/lib/types";
 import { LobbyLayout } from "@/components/LobbyLayout";
+import { OrganizationChooser } from "@/components/OrganizationChooser";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { MfaProvisioning } from "@/components/MfaProvisioning";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -51,6 +58,10 @@ export function LoginPage() {
   const [enrollToken, setEnrollToken] = useState<string | null>(null);
   const [setup, setSetup] = useState<MfaSetupResponse | null>(null);
   const [code, setCode] = useState("");
+  // Set once the password checks out for an address in more than one
+  // organization: no session yet, and the page asks which one to open. The
+  // typed password is held only while the choice is on screen.
+  const [choice, setChoice] = useState<(OrganizationChoice & LoginRequest) | null>(null);
   // The address we have asked home realm discovery about.
   // Cleared whenever the field stops holding a usable one, because the answer
   // belongs to the domain that was asked about and a stale offer would point at
@@ -139,25 +150,35 @@ export function LoginPage() {
     onError: (err) => setServerError(problemText(err, "Could not start two-factor setup.")),
   });
 
+  // Every login response goes through here, from the form and from the
+  // organization chooser alike, so a pick that needs a second factor gets the
+  // same steps as any other sign-in.
+  const handleLoginResponse = async (me: MeResponse, values: LoginRequest) => {
+    if (me.organizationChoice) {
+      setChoice({ ...me.organizationChoice, email: values.email, password: values.password });
+      return;
+    }
+    setChoice(null);
+    if (me.mfaEnrollmentRequired && me.mfaToken) {
+      setEnrollToken(me.mfaToken);
+      beginEnrollment.mutate(me.mfaToken);
+      return;
+    }
+    if (me.mfaRequired && me.mfaToken) {
+      setMfaToken(me.mfaToken);
+      setTrustDays(me.mfaTrustDays ?? 0);
+      return;
+    }
+    await finishLogin(me);
+  };
+
   const login = useMutation({
     mutationFn: async (values: LoginRequest) =>
       api<MeResponse>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify(values),
       }),
-    onSuccess: async (me) => {
-      if (me.mfaEnrollmentRequired && me.mfaToken) {
-        setEnrollToken(me.mfaToken);
-        beginEnrollment.mutate(me.mfaToken);
-        return;
-      }
-      if (me.mfaRequired && me.mfaToken) {
-        setMfaToken(me.mfaToken);
-        setTrustDays(me.mfaTrustDays ?? 0);
-        return;
-      }
-      await finishLogin(me);
-    },
+    onSuccess: (me, values) => handleLoginResponse(me, values),
     onError: (err) => setServerError(problemText(err, "Sign in failed. Please try again.")),
   });
 
@@ -192,6 +213,7 @@ export function LoginPage() {
     setEnrollToken(null);
     setSetup(null);
     setCode("");
+    setChoice(null);
     setServerError(null);
   };
 
@@ -199,7 +221,9 @@ export function LoginPage() {
     ? "Set up two-factor authentication"
     : mfaToken
       ? "Enter your code"
-      : "Sign in";
+      : choice
+        ? "Choose an organization"
+        : "Sign in";
 
   return (
     <LobbyLayout>
@@ -321,6 +345,14 @@ export function LoginPage() {
               Back to sign in
             </button>
           </form>
+        ) : choice ? (
+          <OrganizationChooser
+            choice={choice}
+            email={choice.email}
+            password={choice.password}
+            onLoginResponse={handleLoginResponse}
+            onBack={backToSignIn}
+          />
         ) : (
           <>
             <form

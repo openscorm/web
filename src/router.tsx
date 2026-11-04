@@ -3,6 +3,7 @@ import { PingPage } from "@/routes/PingPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { SettingsPage } from "@/routes/SettingsPage";
 import { RegisterPage } from "@/routes/RegisterPage";
+import { SignupContinuePage } from "@/routes/SignupContinuePage";
 import { ForgotPasswordPage } from "@/routes/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/routes/ResetPasswordPage";
 import { VerifyEmailPage } from "@/routes/VerifyEmailPage";
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/login" replace /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/register", element: <RegisterPage /> },
+  { path: "/signup/continue", element: <SignupContinuePage /> },
   { path: "/forgot", element: <ForgotPasswordPage /> },
   { path: "/reset", element: <ResetPasswordPage /> },
   { path: "/welcome", element: <ResetPasswordPage variant="welcome" /> },

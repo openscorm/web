@@ -89,6 +89,39 @@ export interface MeResponse {
   // On the challenge response: the tenant's trusted-device
   // window in days; 0 or absent hides the "Trust this device" option.
   mfaTrustDays?: number;
+  // Set only on the login response when the address belongs to more
+  // than one organization: no session yet, and the page asks which one.
+  organizationChoice?: OrganizationChoice | null;
+}
+
+// How the sign-in chooser enters each organization. "password" signs in
+// to it by name ("handle/email"), "email" sends a link that signs the
+// person in, and "sso" starts that organization's single sign-on.
+export interface OrganizationChoiceItem {
+  name: string;
+  handle: string;
+  access: "password" | "email" | "sso";
+  signInUrl?: string | null;
+}
+
+export interface OrganizationChoice {
+  // Proves the password checked out, for /api/auth/login/email-link.
+  token: string;
+  organizations: OrganizationChoiceItem[];
+}
+
+// POST /api/auth/register when the address already has an account: no
+// session, and the email (not this page) says what happens next.
+export interface RegisterPendingResponse {
+  pending: true;
+}
+
+// POST /api/auth/register/pending, read by the page the emailed link opens.
+export interface PendingSignupState {
+  state: "valid" | "invalid";
+  tenantName?: string | null;
+  tenantHandle?: string | null;
+  handleTaken: boolean;
 }
 
 // GET /api/auth/mfa and the enable/disable replies.

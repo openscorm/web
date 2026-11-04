@@ -204,3 +204,48 @@ describe("RegisterPage portal name auto-fill", () => {
     expect(portal).toHaveValue("acme-training");
   });
 });
+
+// An address that already has an account gets no session: the server holds
+// the sign-up and emails the address. The page must say only "check your
+// inbox", whatever the address holds, and must not move on to the app.
+describe("RegisterPage for an address that already has an account", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/api/auth/register")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ pending: true }), {
+              status: 202,
+              headers: { "content-type": "application/json" },
+            }),
+          );
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${url}`));
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("asks the person to check their inbox and names nothing else", async () => {
+    renderPage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText(/organization name/i), "Acme Training");
+    await user.type(screen.getByLabelText(/your name/i), "Alex");
+    await user.type(screen.getByLabelText(/^email$/i), "alex@acme.test");
+    await user.type(screen.getByLabelText(/^password$/i), "correct horse battery");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(await screen.findByRole("heading", { name: "Check your inbox" })).toBeInTheDocument();
+    expect(screen.getByText("alex@acme.test")).toBeInTheDocument();
+    expect(screen.queryByText(/already/i)).not.toBeInTheDocument();
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith("/api/auth/me"))).toBe(
+      false,
+    );
+  });
+});
