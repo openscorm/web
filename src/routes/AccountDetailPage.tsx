@@ -30,6 +30,8 @@ interface AccountDetail {
   passwordResetAt: string | null;
   passwordExpiresAt: string | null;
   canSignIn: boolean;
+  // The organization signs in through its own identity provider.
+  ssoEnabled?: boolean;
 }
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -124,12 +126,23 @@ export function AccountDetailPage() {
               <Field label="Last sign-in">
                 {account.authenticatedAt ? formatDateTime(account.authenticatedAt) : "Never"}
               </Field>
-              <Field label="Password last set">
-                {account.passwordResetAt ? formatDateTime(account.passwordResetAt) : "Never"}
-              </Field>
-              <Field label="Password expires">
-                {account.passwordExpiresAt ? formatDate(account.passwordExpiresAt) : "Not set"}
-              </Field>
+              {/* In an organization that signs in through its identity
+                  provider, someone who has never set a password has no
+                  password dates, and "Never" beside a password read as a
+                  problem. A password they did set still shows, since password
+                  sign-in keeps working alongside single sign-on. */}
+              {account.ssoEnabled && !account.passwordResetAt ? (
+                <Field label="Sign-in method">Single sign-on</Field>
+              ) : (
+                <>
+                  <Field label="Password last set">
+                    {account.passwordResetAt ? formatDateTime(account.passwordResetAt) : "Never"}
+                  </Field>
+                  <Field label="Password expires">
+                    {account.passwordExpiresAt ? formatDate(account.passwordExpiresAt) : "Not set"}
+                  </Field>
+                </>
+              )}
             </DetailGrid>
           </DetailCard>
           {account.isActive && tenantKey !== undefined && (
