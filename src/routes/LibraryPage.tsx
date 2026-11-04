@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError, apiBase } from "@/lib/api";
+import { packageNotZip } from "@/lib/packageName";
 import { packageTooLarge } from "@/lib/packageSize";
 import { capBand } from "@/lib/analytics";
 import { formatDateTime } from "@/lib/dates";
@@ -140,10 +141,10 @@ export function LibraryPage() {
   // rather than behind a second click. The size rule stays on this side
   // because the capacity snapshot lives here.
   const beginUpload = (file: File) => {
-    const tooLarge = packageTooLarge(file.size, capacity.data);
-    if (tooLarge) {
+    const refusal = packageNotZip(file.name) ?? packageTooLarge(file.size, capacity.data);
+    if (refusal) {
       setUploadStatus(null);
-      setUploadError(tooLarge);
+      setUploadError(refusal);
       return;
     }
     setUploadError(null);
