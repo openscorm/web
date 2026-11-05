@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 
@@ -106,6 +107,26 @@ describe("VerifyEmailBanner", () => {
       "mailto:support@openscorm.com",
     );
     expect(banner()).not.toBeInTheDocument();
+  });
+
+  it("tells a manager to check spam after a resend", async () => {
+    const user = userEvent.setup();
+    renderWithCachedMe(false, undefined, { isManager: true });
+
+    await user.click(screen.getByRole("button", { name: "Resend email" }));
+
+    expect(await screen.findByText("Sent. Check your inbox and spam folder.")).toBeInTheDocument();
+  });
+
+  it("keeps a learner's line after a resend", async () => {
+    const user = userEvent.setup();
+    renderWithCachedMe(false);
+
+    await user.click(screen.getByRole("button", { name: "Resend email" }));
+
+    expect(
+      await screen.findByText("Verification email sent. Check your inbox."),
+    ).toBeInTheDocument();
   });
 
   it("does not ask again on focus once the account is verified", async () => {

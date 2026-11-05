@@ -45,8 +45,8 @@ export function ConfirmEmailDialog({ open, onClose }: ConfirmEmailDialogProps) {
         <DialogHeader>
           <DialogTitle>Confirm your email to upgrade</DialogTitle>
           <DialogDescription>
-            We need a confirmed email before you can pay, so your receipts and billing notices reach
-            you. Click the link we sent to{" "}
+            We need a confirmed email before you can pay, so your billing notices reach you. Click
+            the link we sent to{" "}
             {user?.email ? (
               <span className="text-foreground font-medium">{user.email}</span>
             ) : (

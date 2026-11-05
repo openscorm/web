@@ -97,6 +97,9 @@ describe("Checkout refused for an unverified email", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Confirm your email to upgrade" });
     expect(dialog).toHaveTextContent("m@x.com");
+    // Card customers get no emailed receipts, so the popup must not promise them.
+    expect(dialog).toHaveTextContent("so your billing notices reach you");
+    expect(dialog).not.toHaveTextContent(/receipts/i);
     expect(screen.getByRole("link", { name: "support@openscorm.com" })).toHaveAttribute(
       "href",
       "mailto:support@openscorm.com",

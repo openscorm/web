@@ -51,7 +51,11 @@ export function VerifyEmailBanner() {
           </span>
         )}
         {state === "sent" ? (
-          <span className="shrink-0 font-medium">Verification email sent. Check your inbox.</span>
+          <span className="shrink-0 font-medium">
+            {paysHere
+              ? "Sent. Check your inbox and spam folder."
+              : "Verification email sent. Check your inbox."}
+          </span>
         ) : (
           <button
             type="button"
