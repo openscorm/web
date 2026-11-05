@@ -63,6 +63,9 @@ interface OperatorAccountDetailResponse {
   authenticatedAt: string | null;
   passwordResetAt: string | null;
   passwordExpiresAt: string;
+  // Null until the address is confirmed, and checkout refuses a manager
+  // until it is.
+  emailVerifiedAt: string | null;
   enrollments: OperatorAccountEnrollment[];
 }
 
@@ -122,6 +125,19 @@ export function OperatorAccountDetailPage() {
     },
   });
 
+  // For a manager stuck at checkout whose confirmation email never arrived:
+  // the same step as clicking the link, so it also starts their welcome emails.
+  const confirmEmail = useMutation({
+    mutationFn: async () =>
+      api<{ confirmed: boolean; changed: boolean }>(
+        `/api/operator/accounts/${accountKey}/confirm-email`,
+        { method: "POST" },
+      ),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["operator"] });
+    },
+  });
+
   const formValid =
     !!form &&
     form.name.trim() !== "" &&
@@ -157,6 +173,15 @@ export function OperatorAccountDetailPage() {
         </Link>
         {a && (
           <div className="flex items-center gap-2">
+            {!a.emailVerifiedAt && (
+              <Button
+                variant="outline"
+                onClick={() => confirmEmail.mutate()}
+                disabled={confirmEmail.isPending}
+              >
+                {confirmEmail.isPending ? "Confirming…" : "Confirm email"}
+              </Button>
+            )}
             <Button variant="outline" onClick={openEdit}>
               Edit
             </Button>
@@ -189,6 +214,9 @@ export function OperatorAccountDetailPage() {
                 {a.nameFirst} {a.nameLast}
               </Field>
               <Field label="Email">{a.email}</Field>
+              <Field label="Email confirmed">
+                {a.emailVerifiedAt ? formatDateTime(a.emailVerifiedAt) : "Not confirmed"}
+              </Field>
               <Field label="Login">
                 <span className="font-mono text-xs">{a.login}</span>
               </Field>

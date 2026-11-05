@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 // forever. Verifying the address must clear the banner without a reload: at
 // once in the tab that verified, and on focus in any tab left behind.
 
-const me = (emailVerified: boolean) =>
+const me = (emailVerified: boolean, role: { isManager?: boolean } = {}) =>
   ({
     accountKey: 1,
     accountId: "a",
@@ -22,8 +22,8 @@ const me = (emailVerified: boolean) =>
     tenantHandle: "acme",
     tenantType: "Mini",
     isOperator: false,
-    isManager: false,
-    isLearner: true,
+    isManager: role.isManager ?? false,
+    isLearner: !role.isManager,
     emailVerified,
   }) as MeResponse;
 
@@ -54,9 +54,13 @@ afterEach(() => {
   focusManager.setFocused(undefined);
 });
 
-function renderWithCachedMe(verified: boolean, page?: ReactNode) {
+function renderWithCachedMe(
+  verified: boolean,
+  page?: ReactNode,
+  role: { isManager?: boolean } = {},
+) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  qc.setQueryData(["auth", "me"], me(verified));
+  qc.setQueryData(["auth", "me"], me(verified, role));
   render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={["/verify-email?token=t0k3n"]}>
@@ -89,6 +93,19 @@ describe("VerifyEmailBanner", () => {
 
     await waitFor(() => expect(banner()).not.toBeInTheDocument());
     expect(meCalls).toBe(1);
+  });
+
+  it("tells an unconfirmed manager that paying waits on it, and how to reach us", () => {
+    renderWithCachedMe(false, undefined, { isManager: true });
+
+    expect(
+      screen.getByText(/Confirm your email before you upgrade or change your plan/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "support@openscorm.com" })).toHaveAttribute(
+      "href",
+      "mailto:support@openscorm.com",
+    );
+    expect(banner()).not.toBeInTheDocument();
   });
 
   it("does not ask again on focus once the account is verified", async () => {

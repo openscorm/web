@@ -5,6 +5,8 @@ import { api, describeApiError } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/page-header";
+import { ConfirmEmailDialog } from "@/components/ConfirmEmailDialog";
+import { isEmailUnverifiedRefusal } from "@/lib/emailConfirmation";
 
 // Free-tier dispatch gate, the "show" surface. RequireDispatch renders this
 // instead of the console for a Free (Trial) manager; a paid tenant never lands
@@ -24,6 +26,7 @@ export function DispatchLockedPage() {
   const { user } = useAuth();
   const tenantKey = user?.tenantKey;
   const [error, setError] = useState<string | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState(false);
 
   const checkout = useMutation({
     // R2/R3: a one-click authenticated upgrade straight to Stripe
@@ -42,7 +45,10 @@ export function DispatchLockedPage() {
     onSuccess: (r) => {
       if (r.url) window.location.href = r.url;
     },
-    onError: (err) => setError(describeApiError(err, "Checkout failed.")),
+    onError: (err) => {
+      if (isEmailUnverifiedRefusal(err)) setConfirmEmail(true);
+      else setError(describeApiError(err, "Checkout failed."));
+    },
   });
 
   return (
@@ -98,6 +104,8 @@ export function DispatchLockedPage() {
           </p>
         )}
       </div>
+
+      <ConfirmEmailDialog open={confirmEmail} onClose={() => setConfirmEmail(false)} />
     </AppShell>
   );
 }

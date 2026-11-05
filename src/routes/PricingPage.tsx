@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useImpression } from "@/hooks/useImpression";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/page-header";
+import { ConfirmEmailDialog } from "@/components/ConfirmEmailDialog";
+import { isEmailUnverifiedRefusal } from "@/lib/emailConfirmation";
 import { formatDate } from "@/lib/dates";
 import { tierLabel } from "@/lib/tiers";
 import {
@@ -97,6 +99,13 @@ export function PricingPage() {
   const subscribed = currentTier !== "" && currentTier !== "Trial" && currentTier !== "Custom";
   const [pending, setPending] = useState<{ tier: string; preview: PlanChangePreview } | null>(null);
   const [done, setDone] = useState<PlanChangeResult | null>(null);
+  // An unconfirmed manager's refusal opens a dialog with a way out, rather
+  // than a line of text that only says what is wrong.
+  const [confirmEmail, setConfirmEmail] = useState(false);
+  const refused = (err: unknown, fallback: string) => {
+    if (isEmailUnverifiedRefusal(err)) setConfirmEmail(true);
+    else setError(describeApiError(err, fallback));
+  };
 
   // pricing_viewed (Group 4). entry_surface names the surface
   // that sent the manager here (e.g. library_banner, dashboard_card), so we can
@@ -120,7 +129,7 @@ export function PricingPage() {
     onSuccess: (r) => {
       if (r.url) window.location.href = r.url;
     },
-    onError: (err) => setError(describeApiError(err, "Checkout failed.")),
+    onError: (err) => refused(err, "Checkout failed."),
   });
 
   const portal = useMutation({
@@ -142,7 +151,7 @@ export function PricingPage() {
         body: JSON.stringify({ tenantKey, targetTier, interval }),
       }),
     onSuccess: (p, targetTier) => setPending({ tier: targetTier, preview: p }),
-    onError: (err) => setError(describeApiError(err, "Could not price the change.")),
+    onError: (err) => refused(err, "Could not price the change."),
   });
 
   const change = useMutation({
@@ -159,7 +168,7 @@ export function PricingPage() {
     },
     onError: (err) => {
       setPending(null);
-      setError(describeApiError(err, "The plan change failed."));
+      refused(err, "The plan change failed.");
     },
   });
 
@@ -368,6 +377,8 @@ export function PricingPage() {
           onConfirm={() => change.mutate(pending.tier)}
         />
       )}
+
+      <ConfirmEmailDialog open={confirmEmail} onClose={() => setConfirmEmail(false)} />
     </AppShell>
   );
 }
