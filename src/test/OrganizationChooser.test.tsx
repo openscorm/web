@@ -30,16 +30,17 @@ function json(body: unknown, status = 200) {
   });
 }
 
-type LoginBody = { email: string; password: string };
+type LoginBody = { email: string; password: string; tenantHandle?: string };
 
 // Sign-in answers with the chooser for the bare email, and with `byName` for
-// a "handle/email" login, which is how the chooser signs in to a pick.
+// a sign-in that names its organization, which is how the chooser signs in to
+// a pick.
 function stub(byName: (body: LoginBody) => Response) {
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.endsWith("/api/auth/login")) {
       const body = JSON.parse(String(init?.body)) as LoginBody;
-      return Promise.resolve(body.email.includes("/") ? byName(body) : json(choice));
+      return Promise.resolve(body.tenantHandle ? byName(body) : json(choice));
     }
     if (url.endsWith("/api/auth/login/email-link")) {
       return Promise.resolve(json({ sent: true }, 202));
@@ -52,10 +53,10 @@ function stub(byName: (body: LoginBody) => Response) {
   return fetchMock;
 }
 
-function loginEmails(fetchMock: ReturnType<typeof stub>) {
+function loginBodies(fetchMock: ReturnType<typeof stub>) {
   return fetchMock.mock.calls
     .filter(([url]) => String(url).endsWith("/api/auth/login"))
-    .map(([, init]) => (JSON.parse(String((init as RequestInit).body)) as LoginBody).email);
+    .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as LoginBody);
 }
 
 async function signIn() {
@@ -93,7 +94,12 @@ describe("Organization chooser", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByText("Dashboard")).toBeInTheDocument();
-    expect(loginEmails(fetchMock)).toEqual(["pat@x.test", "acme/pat@x.test"]);
+    // The pick names its organization rather than composing "acme/pat@x.test",
+    // since a stored login need not be the handle and email as typed.
+    expect(loginBodies(fetchMock)).toEqual([
+      { email: "pat@x.test", password: "typed-password" },
+      { email: "pat@x.test", password: "typed-password", tenantHandle: "acme" },
+    ]);
   });
 
   it("emails a link for an organization with no password of theirs", async () => {
@@ -127,5 +133,26 @@ describe("Organization chooser", () => {
     await user.click(screen.getAllByRole("button", { name: "Sign in" })[1]!);
 
     expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+  });
+
+  it("shows an expired password's own message instead of asking for another password", async () => {
+    stub(() =>
+      json(
+        {
+          type: "https://openscorm.com/errors/password-expired",
+          title: "Invalid credentials",
+          detail: "Password expired. Reset your password to continue.",
+        },
+        401,
+      ),
+    );
+
+    const user = await signIn();
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(
+      await screen.findByText("Password expired. Reset your password to continue."),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Password for Acme Training")).not.toBeInTheDocument();
   });
 });

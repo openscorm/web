@@ -21,6 +21,13 @@ const ACTION: Record<OrganizationChoiceItem["access"], string> = {
   sso: "Single sign-on",
 };
 
+// The server's problem type for a correct password that has expired.
+const EXPIRED_PASSWORD_TYPE = "https://openscorm.com/errors/password-expired";
+
+function isExpiredPassword(err: ApiError): boolean {
+  return (err.problem as { type?: string } | undefined)?.type === EXPIRED_PASSWORD_TYPE;
+}
+
 interface OrganizationChooserProps {
   choice: OrganizationChoice;
   email: string;
@@ -55,9 +62,16 @@ export function OrganizationChooser({
       api<MeResponse>("/api/auth/login", { method: "POST", body: JSON.stringify(values) }),
     onSuccess: (me, values) => onLoginResponse(me, values),
     onError: (err, values) => {
-      // The typed password did not open this one, so ask for its own.
-      if (err instanceof ApiError && err.status === 401 && values.password === password) {
-        setRetryHandle(values.email.split("/")[0] ?? null);
+      // The typed password did not open this one, so ask for its own. An
+      // expired password is a different refusal: its own message says what
+      // to do, and asking for another password would not help.
+      if (
+        err instanceof ApiError &&
+        err.status === 401 &&
+        !isExpiredPassword(err) &&
+        values.password === password
+      ) {
+        setRetryHandle(values.tenantHandle ?? null);
         setRetryPassword("");
         return;
       }
@@ -88,7 +102,7 @@ export function OrganizationChooser({
       return;
     }
     setRetryHandle(null);
-    signIn.mutate({ email: `${organization.handle}/${email}`, password });
+    signIn.mutate({ email, password, tenantHandle: organization.handle });
   };
 
   const busy = signIn.isPending || emailLink.isPending;
@@ -144,8 +158,9 @@ export function OrganizationChooser({
                   e.preventDefault();
                   setError(null);
                   signIn.mutate({
-                    email: `${organization.handle}/${email}`,
+                    email,
                     password: retryPassword,
+                    tenantHandle: organization.handle,
                   });
                 }}
               >

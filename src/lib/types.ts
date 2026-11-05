@@ -262,6 +262,10 @@ export interface EnrollPendingResponse {
 export interface LoginRequest {
   email: string;
   password: string;
+  // Set by the organization chooser: the organization picked, with email as
+  // the bare address. The server finds that organization's account for the
+  // address itself, since a stored login need not be "handle/email".
+  tenantHandle?: string;
 }
 
 // RFC 7807 shape returned by ASP.NET Core Problem() helper.
