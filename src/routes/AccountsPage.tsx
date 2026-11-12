@@ -140,7 +140,7 @@ export function AccountsPage() {
       setServerError(null);
       setNotice({
         text: values.invite
-          ? `Account created. An invitation to set a password is on its way to ${values.email}.`
+          ? `Account created. An invitation is on its way to ${values.email}.`
           : "Account created.",
       });
       reset();
@@ -326,7 +326,7 @@ export function AccountsPage() {
             )}
           </div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" {...register("invite")} /> Email an invitation to set a password
+            <input type="checkbox" {...register("invite")} /> Email an invitation
           </label>
           <div className="sm:col-span-2">
             <Button type="submit" disabled={create.isPending}>

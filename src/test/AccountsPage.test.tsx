@@ -176,7 +176,7 @@ describe("AccountsPage invitations", () => {
     const user = userEvent.setup();
     await screen.findByText("Ann Lee");
 
-    expect(screen.getByLabelText("Email an invitation to set a password")).toBeChecked();
+    expect(screen.getByLabelText("Email an invitation")).toBeChecked();
     await user.type(screen.getByLabelText("Name"), "New Starter");
     await user.type(screen.getByLabelText("Email"), "new@acme.test");
     await user.click(screen.getByRole("button", { name: "Create account" }));
@@ -184,16 +184,14 @@ describe("AccountsPage invitations", () => {
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]).toMatchObject({ isLearner: true, invite: true });
     expect(
-      await screen.findByText(
-        "Account created. An invitation to set a password is on its way to new@acme.test.",
-      ),
+      await screen.findByText("Account created. An invitation is on its way to new@acme.test."),
     ).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Name"), "New Manager");
     await user.type(screen.getByLabelText("Email"), "boss@acme.test");
     await user.click(screen.getByLabelText("Manager"));
     await user.click(screen.getByLabelText("Learner"));
-    expect(screen.getByLabelText("Email an invitation to set a password")).not.toBeChecked();
+    expect(screen.getByLabelText("Email an invitation")).not.toBeChecked();
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
     await waitFor(() => expect(posts).toHaveLength(2));

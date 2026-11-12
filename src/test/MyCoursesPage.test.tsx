@@ -112,4 +112,40 @@ describe("MyCoursesPage", () => {
     expect(screen.getByText("Assigned 2026-10-27")).toBeInTheDocument();
     expect(screen.getAllByText(/^Assigned /)).toHaveLength(3);
   });
+
+  // With no courses, a learner is pointed at their manager or HR team and a
+  // manager at the upload, rather than both being told to ask a manager.
+  function renderWithNoCourses(me: MeResponse) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/api/auth/me")) return Promise.resolve(json(me));
+        if (url.endsWith("/api/tenants/42/courses")) return Promise.resolve(json([]));
+        return Promise.reject(new Error(`unexpected fetch: ${url}`));
+      }),
+    );
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/courses"]}>
+          <MyCoursesPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("tells a learner with no courses to check with their manager or HR team", async () => {
+    renderWithNoCourses(learner);
+    expect(
+      await screen.findByText("No courses yet. Check with your manager or HR team."),
+    ).toBeInTheDocument();
+  });
+
+  it("tells a manager with no courses to upload one", async () => {
+    renderWithNoCourses({ ...learner, isManager: true });
+    expect(
+      await screen.findByText("No courses yet. Upload one to get started."),
+    ).toBeInTheDocument();
+  });
 });

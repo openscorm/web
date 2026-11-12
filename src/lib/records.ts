@@ -65,12 +65,12 @@ export const IDENTITY_NOT_RECORDED = "Not recorded";
 // stored launched status under the name the table shows for it.
 export const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_started", label: "Not started" },
-  { value: "passed", label: "passed" },
-  { value: "failed", label: "failed" },
-  { value: "completed", label: "completed" },
-  { value: "incomplete", label: "incomplete" },
-  { value: "browsed", label: "browsed" },
-  { value: "not attempted", label: "not attempted" },
+  { value: "passed", label: "Passed" },
+  { value: "failed", label: "Failed" },
+  { value: "completed", label: "Completed" },
+  { value: "incomplete", label: "Incomplete" },
+  { value: "browsed", label: "Browsed" },
+  { value: "not attempted", label: "Not attempted" },
 ];
 
 // Offered once the organization has assigned a course: who was given a

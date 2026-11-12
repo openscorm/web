@@ -41,7 +41,9 @@ export function MyCoursesPage() {
       {list.isLoading && <p className="text-muted-foreground text-sm">Loading courses…</p>}
       {list.data?.length === 0 && (
         <p className="text-muted-foreground text-sm">
-          No courses yet. Ask your manager for an invitation.
+          {user?.isManager || user?.isOperator
+            ? "No courses yet. Upload one to get started."
+            : "No courses yet. Check with your manager or HR team."}
         </p>
       )}
 

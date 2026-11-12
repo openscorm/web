@@ -326,8 +326,8 @@ export function LearnerImportCard({ tenantKey }: { tenantKey: number }) {
       </div>
       <p className="text-muted-foreground mb-4 text-sm">
         A CSV with First name, Last name and Email columns, up to 2,000 learners. Each new learner
-        is emailed an invitation to set a password. Anyone already in your organization is not added
-        again. Before you import, you can pick courses for everyone in the file.
+        is emailed an invitation. Anyone already in your organization is not added again. Before you
+        import, you can pick courses for everyone in the file.
       </p>
 
       {error && (

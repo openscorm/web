@@ -16,13 +16,20 @@ const labels: Record<string, string> = {
   launched: "Not started",
 };
 
+// Badges read in sentence case ("Passed", "Not attempted"), like every other
+// label on screen. Only the display changes: the CSV and the API keep the
+// stored lowercase value.
+function sentenceCase(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+}
+
 export function StatusBadge({ status }: { status: string }) {
   const key = (status ?? "").toLowerCase();
   const className = styles[key] ?? "bg-muted text-muted-foreground";
-  const label = labels[key] ?? status ?? "unknown";
+  const label = labels[key] ?? (key ? sentenceCase(key) : "Unknown");
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs whitespace-nowrap ${className}`}>
-      {label || "unknown"}
+      {label}
     </span>
   );
 }
