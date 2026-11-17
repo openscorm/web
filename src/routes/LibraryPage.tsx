@@ -28,7 +28,8 @@ interface CourseRow {
   courseSizeInKB: number;
   courseSize: string;
   uploadedAt: string;
-  uploadedByEmail: string;
+  // Null for a course uploaded through the API, which has no person behind it.
+  uploadedByEmail: string | null;
   attempts: number;
   status: string | null;
   score: string | null;
@@ -480,7 +481,8 @@ export function LibraryPage() {
               SCORM {c.version} — {c.courseSize}
             </div>
             <div className="text-muted-foreground mb-3 text-xs">
-              Uploaded {formatDateTime(c.uploadedAt)} by {c.uploadedByEmail}
+              Uploaded {formatDateTime(c.uploadedAt)}{" "}
+              {c.uploadedByEmail ? `by ${c.uploadedByEmail}` : "through the API"}
             </div>
             {c.tag && (
               <div className="mb-3">
