@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { formatDate } from "@/lib/dates";
 import type { InvitationLink } from "@/lib/types";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CopyButton } from "@/components/ui/copy-button";
 
 // A course's public invitation links. Each link can expire or be revoked on its
 // own, so one group's link can be turned off without breaking another's. The
@@ -27,27 +28,6 @@ const statusLabel: Record<InvitationLink["status"], string> = {
   expired: "Expired",
   revoked: "Revoked",
 };
-
-function CopyButton({ url }: { url: string }) {
-  const [label, setLabel] = useState("Copy");
-  return (
-    <button
-      type="button"
-      className={secondaryBtn}
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(url);
-          setLabel("Copied");
-          setTimeout(() => setLabel("Copy"), 1500);
-        } catch {
-          setLabel("Copy failed");
-        }
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
 export function InvitationLinksSection({
   tenantKey,

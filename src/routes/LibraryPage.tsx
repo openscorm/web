@@ -15,6 +15,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FileDropzone } from "@/components/ui/file-dropzone";
+import { UploadSharePanel } from "@/components/UploadSharePanel";
 import { uploadDisabledFor } from "@/lib/uploadGate";
 
 interface CourseRow {
@@ -55,6 +56,28 @@ interface CapacitySnapshot {
   // The plan's package ceiling, so an oversized file is
   // refused here before anyone waits through the upload to be refused there.
   packageLimitMb: number;
+  // Every active account in the organization, managers included, against the
+  // plan's people limit. The share panel turns these into places left.
+  userCount: number;
+  userLimit: number;
+  isUsersUnlimited: boolean;
+}
+
+// The course the share panel is about: always the latest successful upload.
+interface SharedCourse {
+  courseKey: number;
+  courseSlug: string;
+  title: string;
+  manageUrl: string;
+}
+
+function sharedFrom(row: CourseRow): SharedCourse {
+  return {
+    courseKey: row.courseKey,
+    courseSlug: row.courseSlug,
+    title: row.title || row.courseSlug,
+    manageUrl: row.manageUrl,
+  };
 }
 
 export function LibraryPage() {
@@ -64,7 +87,10 @@ export function LibraryPage() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  // Set by a successful upload of either kind, and cleared the moment the
+  // next one starts, is refused or fails, so the panel never shows one
+  // course's link beside another upload's outcome.
+  const [shared, setShared] = useState<SharedCourse | null>(null);
   // The card names the file while it uploads, and Cancel needs
   // something to abort. api() spreads its init into fetch, so an AbortSignal
   // costs nothing in the shared helper.
@@ -78,7 +104,6 @@ export function LibraryPage() {
   const [docVersion, setDocVersion] = useState("");
   const [docAck, setDocAck] = useState(DEFAULT_ACKNOWLEDGMENT);
   const [docError, setDocError] = useState<string | null>(null);
-  const [docStatus, setDocStatus] = useState<string | null>(null);
   // The course awaiting a delete confirmation; null when the dialog is closed.
   const [pendingDelete, setPendingDelete] = useState<{ courseSlug: string; title: string } | null>(
     null,
@@ -110,14 +135,14 @@ export function LibraryPage() {
     },
     onSuccess: async (row) => {
       setUploadError(null);
-      setUploadStatus(`Uploaded "${row.title || row.courseSlug}".`);
+      setShared(sharedFrom(row));
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "courses"] }),
         qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "capacity"] }),
       ]);
     },
     onError: (err) => {
-      setUploadStatus(null);
+      setShared(null);
       // A cancel is the person's own act. Reporting it back at them as a
       // failure would be the app telling them something went wrong when
       // exactly what they asked for happened.
@@ -144,12 +169,12 @@ export function LibraryPage() {
   const beginUpload = (file: File) => {
     const refusal = packageNotZip(file.name) ?? packageTooLarge(file.size, capacity.data);
     if (refusal) {
-      setUploadStatus(null);
+      setShared(null);
       setUploadError(refusal);
       return;
     }
     setUploadError(null);
-    setUploadStatus(null);
+    setShared(null);
     setUploadingName(file.name);
     upload.mutate(file);
   };
@@ -165,7 +190,8 @@ export function LibraryPage() {
       }),
     onSuccess: async (row) => {
       setDocError(null);
-      setDocStatus(`Added "${row.title}" version ${row.documentVersion} to your library.`);
+      setShared(sharedFrom(row));
+      setDocOpen(false);
       setDocTitle("");
       setDocVersion("");
       setDocAck(DEFAULT_ACKNOWLEDGMENT);
@@ -176,7 +202,7 @@ export function LibraryPage() {
       ]);
     },
     onError: (err) => {
-      setDocStatus(null);
+      setShared(null);
       if (err instanceof ApiError && err.problem) {
         const p = err.problem as ProblemResponse;
         setDocError(p.detail ?? p.title ?? "Upload failed.");
@@ -191,8 +217,10 @@ export function LibraryPage() {
       api<void>(`/api/tenants/${tenantKey}/courses/${encodeURIComponent(slug)}`, {
         method: "DELETE",
       }),
-    onSuccess: async () => {
+    onSuccess: async (_, slug) => {
       setPendingDelete(null);
+      // A deleted course has no link left to share.
+      setShared((s) => (s?.courseSlug === slug ? null : s));
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "courses"] }),
         qc.invalidateQueries({ queryKey: ["tenants", tenantKey, "capacity"] }),
@@ -261,6 +289,17 @@ export function LibraryPage() {
         </div>
       )}
 
+      {isManager && tenantKey && shared && !uploadError && !docError && (
+        <UploadSharePanel
+          key={shared.courseKey}
+          tenantKey={tenantKey}
+          courseKey={shared.courseKey}
+          title={shared.title}
+          manageUrl={shared.manageUrl}
+          capacity={capacity.data}
+        />
+      )}
+
       {isManager && (
         <div className="border-border bg-card text-card-foreground mb-6 rounded-xl border p-6">
           <h2 className="mb-3 text-lg font-semibold">Upload a SCORM package</h2>
@@ -270,11 +309,6 @@ export function LibraryPage() {
               className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
             >
               {uploadError}
-            </div>
-          )}
-          {uploadStatus && !uploadError && (
-            <div className="mb-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
-              {uploadStatus}
             </div>
           )}
           {upload.isPending ? (
@@ -417,6 +451,7 @@ export function LibraryPage() {
                       return;
                     }
                     setDocError(null);
+                    setShared(null);
                     const form = new FormData();
                     form.append("file", file);
                     form.append("title", docTitle.trim());
@@ -433,12 +468,6 @@ export function LibraryPage() {
                       : "Add document"}
                 </button>
               </div>
-            </div>
-          )}
-
-          {docStatus && !docError && (
-            <div className="mt-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
-              {docStatus}
             </div>
           )}
         </div>
