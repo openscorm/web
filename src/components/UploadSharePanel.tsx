@@ -39,9 +39,11 @@ export function UploadSharePanel({
       role="status"
       className="mb-6 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200"
     >
-      <div className="flex items-baseline justify-between gap-3">
+      {/* Both rows wrap: in a narrow column the title keeps whole words and
+          Manage and Copy drop to their own line instead of squeezing the text. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="min-w-0 font-semibold break-words">Uploaded {title}</p>
-        <Link to={manageUrl} className={`${linkClass} shrink-0`}>
+        <Link to={manageUrl} className={`${linkClass} ml-auto shrink-0`}>
           Manage
         </Link>
       </div>
@@ -51,10 +53,10 @@ export function UploadSharePanel({
           <p className="mt-1">
             Share this link with your learners. You'll see their progress in Reports.
           </p>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <code
               title={state.url}
-              className="bg-background text-foreground min-w-0 flex-1 truncate rounded px-3 py-2 font-mono text-xs"
+              className="bg-background text-foreground min-w-0 flex-1 basis-48 truncate rounded px-3 py-2 font-mono text-xs"
             >
               {state.url}
             </code>
