@@ -58,6 +58,10 @@ interface PlanChangePreview {
   currency: string;
   nextInvoiceAt: string;
   nextInvoiceAmountCents: number;
+  // The tax inside each amount, zero where none applies. Optional so a page
+  // loaded before a release still reads an older answer.
+  taxDueTodayCents?: number;
+  nextInvoiceTaxCents?: number;
 }
 
 interface PlanChangeResult {
@@ -397,7 +401,15 @@ function PlanChangeDialog(props: {
   const { preview } = props;
   const upgrade = preview.direction === "upgrade";
   const verb = upgrade ? "Upgrade" : "Downgrade";
-  const next = `From ${formatDate(preview.nextInvoiceAt)}, you'll pay ${formatUsd(preview.nextInvoiceAmountCents)} ${perInterval(preview.interval)}.`;
+  // Both amounts are what the card is charged, so tax is named beside them
+  // rather than left for the invoice to reveal. A taxed charge today with no
+  // tax known for the next invoice means that invoice is quoted before tax.
+  const taxToday = preview.taxDueTodayCents ?? 0;
+  const taxNext = preview.nextInvoiceTaxCents ?? 0;
+  const todayTaxNote = taxToday > 0 ? ` (including ${formatUsd(taxToday)} tax)` : "";
+  const nextTaxNote =
+    taxNext > 0 ? ` (including ${formatUsd(taxNext)} tax)` : taxToday > 0 ? " plus tax" : "";
+  const next = `From ${formatDate(preview.nextInvoiceAt)}, you'll pay ${formatUsd(preview.nextInvoiceAmountCents)} ${perInterval(preview.interval)}${nextTaxNote}.`;
   return (
     <Dialog open onOpenChange={(open) => !open && !props.busy && props.onCancel()}>
       <DialogContent>
@@ -407,7 +419,7 @@ function PlanChangeDialog(props: {
           </DialogTitle>
           <DialogDescription>
             {upgrade
-              ? `You'll be charged ${formatUsd(preview.amountDueTodayCents)} today for the rest of your current billing period. ${next}`
+              ? `You'll be charged ${formatUsd(preview.amountDueTodayCents)}${todayTaxNote} today for the rest of your current billing period. ${next}`
               : `Your plan changes right away. There's no refund for the unused part of your current plan. ${next}`}
           </DialogDescription>
         </DialogHeader>

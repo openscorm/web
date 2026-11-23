@@ -138,6 +138,40 @@ describe("PricingPage plan change", () => {
     expect(posts[1].body).toMatchObject({ targetTier: "Starter", interval: "monthly" });
   });
 
+  it("names the tax inside both amounts when the preview carries it", async () => {
+    previewResponse = () =>
+      json({
+        ...upgradePreview,
+        amountDueTodayCents: 1575,
+        taxDueTodayCents: 75,
+        nextInvoiceAmountCents: 6300,
+        nextInvoiceTaxCents: 300,
+      });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Choose Starter" }));
+
+    expect(
+      await screen.findByText(
+        /You'll be charged \$15\.75 \(including \$0\.75 tax\) today for the rest of your current billing period\. From 2026-09-2\d, you'll pay \$63\.00 a month \(including \$3\.00 tax\)\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says plus tax when today's charge is taxed and the next invoice's tax is unknown", async () => {
+    previewResponse = () =>
+      json({ ...upgradePreview, amountDueTodayCents: 1575, taxDueTodayCents: 75 });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Choose Starter" }));
+
+    expect(
+      await screen.findByText(/From 2026-09-2\d, you'll pay \$60\.00 a month plus tax\./),
+    ).toBeInTheDocument();
+  });
+
   it("names the no-refund rule on a downgrade and labels the button accordingly", async () => {
     previewResponse = () =>
       json({
